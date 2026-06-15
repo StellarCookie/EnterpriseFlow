@@ -1,0 +1,218 @@
+### ============================================
+### EnterpriseFlow — REST Client Tests (VS Code)
+### Instalează extensia: REST Client (Huachao Mao)
+### ============================================
+
+@baseUrl = http://localhost:5000/api
+
+### ===== AUTH =====
+
+### 1. Înregistrare Manager
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Roman",
+  "lastName": "Iuliana",
+  "email": "manager@demo.ro",
+  "password": "parola123",
+  "role": "Manager"
+}
+
+###
+
+### 2. Înregistrare Angajat
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Ion",
+  "lastName": "Dănilă",
+  "email": "angajat@demo.ro",
+  "password": "parola123",
+  "role": "Angajat"
+}
+
+###
+
+### 3. Login Manager — copiază token din răspuns
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@demo.ro",
+  "password": "parola123"
+}
+
+###
+
+### 4. Login Angajat
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "angajat@demo.ro",
+  "password": "parola123"
+}
+
+###
+
+### ===== STOCKS — operații Angajat =====
+
+### 5. Angajat: Adaugă produs în nomenclator (OK)
+POST {{baseUrl}}/stocks
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+Content-Type: application/json
+
+{
+  "name": "Monitor 27\" 4K",
+  "sku": "MON274K",
+  "quantity": 3,
+  "minQuantity": 2,
+  "unit": "buc.",
+  "unitPrice": 1500,
+  "category": "IT"
+}
+
+###
+
+### 6. Angajat: Actualizează stoc manual (inventar fizic)
+PATCH {{baseUrl}}/stocks/ID_PRODUS_AICI
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+Content-Type: application/json
+
+{
+  "quantity": 5,
+  "minQuantity": 2
+}
+
+###
+
+### 7. Manager încearcă să adauge produs — TREBUIE SĂ PRIMEȘTI 403
+POST {{baseUrl}}/stocks
+Authorization: Bearer TOKEN_MANAGER_AICI
+Content-Type: application/json
+
+{
+  "name": "Test produs",
+  "quantity": 1
+}
+
+###
+
+### ===== TRANSACTIONS — operații ambele roluri =====
+
+### 8. Angajat: Creează tranzacție normală (cheltuială furnizor)
+POST {{baseUrl}}/transactions
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+Content-Type: application/json
+
+{
+  "type": "Cheltuială",
+  "documentType": "Factură",
+  "supplier": "Electro SRL",
+  "category": "Furnizori",
+  "netAmount": 1556.30,
+  "tva": 19,
+  "totalAmount": 1850,
+  "paymentMethod": "Transfer bancar",
+  "dueDate": "2026-05-30"
+}
+
+###
+
+### 9. Angajat: Creează tranzacție cu stoc (CRITICĂ — specifică produsul și cantitatea)
+### La creare: stocul NU se modifică — rămâne la 3 buc.
+POST {{baseUrl}}/transactions
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+Content-Type: application/json
+
+{
+  "type": "Cheltuială",
+  "documentType": "Chitanță",
+  "supplier": "Electro SRL",
+  "category": "Stoc produse",
+  "netAmount": 6000,
+  "tva": 19,
+  "totalAmount": 7140,
+  "paymentMethod": "Transfer bancar",
+  "stockItem": "ID_PRODUS_MONITOR_AICI",
+  "stockQuantityDelta": 4,
+  "notes": "Cumpărare 4 monitoare"
+}
+
+###
+
+### 10. Angajat încearcă să aprobe — TREBUIE SĂ PRIMEȘTI 403
+PATCH {{baseUrl}}/transactions/ID_TRANZACTIE_AICI/approve
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+
+###
+
+### 11. Manager: Aprobă tranzacția (AUTOMATIZARE)
+### La aprobare: stocul crește automat 3 -> 7 buc. și soldul scade
+PATCH {{baseUrl}}/transactions/ID_TRANZACTIE_AICI/approve
+Authorization: Bearer TOKEN_MANAGER_AICI
+
+###
+
+### 12. Verifică că stocul s-a actualizat automat la 7 buc.
+GET {{baseUrl}}/stocks/ID_PRODUS_MONITOR_AICI
+Authorization: Bearer TOKEN_MANAGER_AICI
+
+###
+
+### 13. Manager: Respinge o tranzacție cu motiv
+PATCH {{baseUrl}}/transactions/ID_ALTA_TRANZACTIE/reject
+Authorization: Bearer TOKEN_MANAGER_AICI
+Content-Type: application/json
+
+{
+  "reason": "Documentul original lipsește."
+}
+
+###
+
+### 14. Manager: Statistici dashboard (date complete)
+GET {{baseUrl}}/transactions/stats/dashboard
+Authorization: Bearer TOKEN_MANAGER_AICI
+
+###
+
+### 15. Angajat: Statistici dashboard (date limitate — doar ale lui)
+GET {{baseUrl}}/transactions/stats/dashboard
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+
+###
+
+### 16. Manager: Generare raport PDF mai 2026
+GET {{baseUrl}}/transactions/report/monthly?month=5&year=2026
+Authorization: Bearer TOKEN_MANAGER_AICI
+
+###
+
+### 17. Angajat încearcă să genereze raport — TREBUIE SĂ PRIMEȘTI 403
+GET {{baseUrl}}/transactions/report/monthly?month=5&year=2026
+Authorization: Bearer TOKEN_ANGAJAT_AICI
+
+###
+
+### 18. Utilizator neautentificat încearcă să acceseze tranzacțiile — TREBUIE 401
+GET {{baseUrl}}/transactions
+
+###
+
+### 19. Manager: Vede lista tuturor utilizatorilor
+GET {{baseUrl}}/auth/users
+Authorization: Bearer TOKEN_MANAGER_AICI
+
+###
+
+### 20. Manager: Schimbă rolul unui utilizator
+PATCH {{baseUrl}}/auth/users/ID_USER_AICI/role
+Authorization: Bearer TOKEN_MANAGER_AICI
+Content-Type: application/json
+
+{
+  "role": "Manager"
+}
