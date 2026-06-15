@@ -1,0 +1,12 @@
+# Ignoră folderele node_modules din ambele proiecte (backend și frontend)
+node_modules/
+
+# Ignoră fișierul cu parole și chei secrete din backend
+backend/.env
+
+# Ignoră folderul de producție/build din frontend
+frontend/dist/
+
+# Altele (opțional, fișiere de sistem)
+.DS_Store
+Thumbs.db
