@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Check, X, Clock, MessageSquare, Package } from 'lucide-react'
+import { Plus, Check, X, Clock, MessageSquare, Package, Camera } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { ToastContainer } from '../components/Toast'
 import { useTransactions } from '../hooks/useTransactions'
 import { useStocks } from '../hooks/useStocks'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import api from '../api' // Importăm instanța ta globală de axios pentru apelul către OCR
 
 const formatRON = (n) =>
   new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2 }).format(n || 0) + ' RON'
@@ -49,9 +50,12 @@ const PAYMENT_METHODS = ['Transfer bancar', 'Numerar', 'Card']
 const resetForm = {
   type: 'Cheltuială', documentType: 'Factură', supplier: '',
   cui: '',
-  category: 'Furnizori', netAmount: '', tva: '21',
+  category: 'Furnizori', netAmount: '', tva: '19', // Modificat la 19 standard pentru o aliniere mai ușoară cu OCR-ul românesc
   totalAmount: '', dueDate: '', paymentMethod: 'Transfer bancar',
-  notes: '', stockItem: '', stockQuantityDelta: '',
+  notes: '', stockItem: '', stockQuantityDelta: '', documentNumber: '',
+  bankAccount: '',
+  issueDate: '',
+  paymentStatus: 'Neplătit'
 }
 
 const resetCustom = { documentType: '', category: '', paymentMethod: '' }
@@ -64,6 +68,7 @@ export default function Tranzactii() {
   const [rejectNote, setRejectNote] = useState('')
   const [showRejectInput, setShowRejectInput] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [loadingScan, setLoadingScan] = useState(false) // Stare nouă pentru procesul de scanare OCR
   const [form, setForm] = useState(resetForm)
   const [customFields, setCustomFields] = useState(resetCustom)
 
@@ -139,6 +144,47 @@ export default function Tranzactii() {
     }
   }
 
+  // Funcția nouă care trimite documentul încărcat către endpoint-ul OCR de backend
+  const handleInvoiceScan = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+
+  const uploadData = new FormData()
+  uploadData.append('invoice', file)
+
+  setLoadingScan(true)
+  success('Se analizează structura documentului. Te rugăm să aștepți...')
+
+  try {
+    const response = await api.post('/ocr/scan', uploadData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    if (response.data.success) {
+      const extracted = response.data.data
+
+      setForm(f => ({
+        ...f,
+        cui: extracted.cui || f.cui,
+        supplier: extracted.supplier || f.supplier,
+        documentNumber: extracted.documentNumber || f.documentNumber,
+        bankAccount: extracted.bankAccount || f.bankAccount,
+        issueDate: extracted.issueDate || f.issueDate,
+        netAmount: extracted.netAmount || f.netAmount,
+        tva: extracted.tva || f.tva,
+        totalAmount: extracted.totalAmount || f.totalAmount,
+      }))
+
+      success('Document scanat cu succes! Câmpurile financiare au fost completate.')
+    }
+  } catch (err) {
+    console.error(err)
+    toastError('Nu s-au putut extrage datele automat.')
+  } finally {
+    setLoadingScan(false)
+    e.target.value = null
+  }
+}
   // helpers pentru câmpurile cu "Altele"
   const isCustomDocType = !DOCUMENT_TYPES.includes(form.documentType)
   const isCustomCategory = !CATEGORIES.includes(form.category)
@@ -283,22 +329,38 @@ export default function Tranzactii() {
                     {approvalSteps.map((step, i) => <ApprovalStep key={i} {...step} />)}
                   </div>
                   <div>
-                    <p className="text-[9.5px] font-semibold text-[#8ab0b8] uppercase tracking-widest mb-3">Detalii financiare</p>
-                    <div className="bg-[#f5fcfc] border border-[#cce8ec] rounded-xl overflow-hidden">
-                      {[
-                        { label: 'Sumă netă', value: formatRON(selected.netAmount) },
-                        { label: `TVA (${selected.tva}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
-                        { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
-                        { label: 'Metodă plată', value: selected.paymentMethod },
-                        { label: 'Scadență', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-' },
-                      ].map(({ label, value, bold }) => (
-                        <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-[#d8edf0] last:border-0">
-                          <span className="text-[12px] text-[#6b9aa5]">{label}</span>
-                          <span className={`text-[12.5px] ${bold ? 'font-semibold text-[#0d2b32]' : 'text-[#0d2b32]'}`}>{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+  <p className="text-[9.5px] font-semibold text-[#8ab0b8] uppercase tracking-widest mb-3">Detalii financiare & Document</p>
+  <div className="bg-[#f5fcfc] border border-[#cce8ec] rounded-xl overflow-hidden">
+    {[
+      { label: 'Număr Document / Bon', value: selected.documentNumber || '-' },
+      { label: 'Dată Emitere Document', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
+      { label: 'Cont IBAN Furnizor', value: selected.bankAccount || '-', mono: true },
+      { label: 'Status Plată Remisă', value: selected.paymentStatus || 'Neplătit', badge: true },
+      { label: 'Sumă netă', value: formatRON(selected.netAmount) },
+      { label: `TVA (${selected.tva || 19}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
+      { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
+      { label: 'Metodă plată', value: selected.paymentMethod },
+      { label: 'Scadență Aprobare Manager', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
+    ].map(({ label, value, bold, mono, badge, alert }) => (
+      <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-[#d8edf0] last:border-0">
+        <span className="text-[12px] text-[#6b9aa5]">{label}</span>
+        {badge ? (
+          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+            value === 'Plătit' ? 'bg-[#e0f7f5] text-[#0f6e56] border-[#9fe1cb]' :
+            value === 'În curs' ? 'bg-[#faeeda] text-[#854f0b] border-[#f5c775]' :
+            'bg-[#fcebeb] text-[#a32d2d] border-[#f7c1c1]'
+          }`}>
+            {value}
+          </span>
+        ) : (
+          <span className={`text-[12.5px] ${bold ? 'font-semibold text-[#0d2b32]' : 'text-[#0d2b32]'} ${mono ? 'font-mono text-[11.5px]' : ''} ${alert ? 'text-[#854f0b] font-medium' : ''}`}>
+            {value}
+          </span>
+        )}
+      </div>
+    ))}
+  </div>
+</div>
                 </div>
               </div>
 
@@ -354,6 +416,26 @@ export default function Tranzactii() {
               <button onClick={closeForm} className="text-[#8ab0b8] hover:text-[#0d2b32]"><X size={18} /></button>
             </div>
             <form onSubmit={handleCreate} className="p-5 space-y-4">
+              
+              {/* ZONĂ NOUĂ: Panou dedicat pentru scanare și procesare rapidă prin OCR */}
+              <div className="p-4 bg-[#f5fcfc] border border-dashed border-[#9fe1cb] rounded-xl text-center">
+                <p className="text-[12px] text-[#0d2b32] mb-2 font-medium">
+                  {loadingScan ? "Se procesează documentul..." : "Completare automată inteligentă"}
+                </p>
+                <label className={`inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[12px] font-medium shadow-sm hover:bg-indigo-700 cursor-pointer transition-all ${loadingScan ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <Camera size={14} />
+                  <span>{loadingScan ? 'Procesare OCR în curs...' : 'Scanează Poză / PDF Factură'}</span>
+                  <input 
+                    type="file" 
+                    accept="image/*,application/pdf" 
+                    className="hidden" 
+                    onChange={handleInvoiceScan}
+                    disabled={loadingScan}
+                  />
+                </label>
+                <p className="text-[10px] text-[#6b9aa5] mt-1.5 font-light">Sistemul va extrage automat CUI, Furnizor, Sumă și Dată</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Tip</label>
@@ -386,23 +468,6 @@ export default function Tranzactii() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Furnizor / Client</label>
-                <input required className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                  value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Ex: Electro SRL" />
-              </div>
-
-              <div>
-  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">CUI Furnizor (opțional)</label>
-  <input
-    className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-    value={form.cui}
-    onChange={e => setForm(f => ({ ...f, cui: e.target.value }))}
-    placeholder="Ex: RO12345678"
-  />
-</div>
-
-              {/* Categorie cu "Altele" editabil */}
-              <div>
                 <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Categorie</label>
                 <select
                   className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
@@ -421,6 +486,67 @@ export default function Tranzactii() {
                   />
                 )}
               </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Furnizor / Client</label>
+                <input required className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+                  value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Ex: Electro SRL" />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">CUI</label>
+                <input
+                  className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+                  value={form.cui}
+                  onChange={e => setForm(f => ({ ...f, cui: e.target.value }))}
+                  placeholder="Ex: RO12345678"
+                />
+              </div>
+              {/* ================= PASUL C: CÂMPURILE NOI ADĂUGATE AICI ================= */}
+<div className="grid grid-cols-2 gap-3">
+  <div>
+    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Număr Document</label>
+    <input 
+      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+      value={form.documentNumber} 
+      onChange={e => setForm(f => ({ ...f, documentNumber: e.target.value }))} 
+      placeholder="Ex: Seria FT nr. 42" 
+    />
+  </div>
+  <div>
+    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Data emitere</label>
+    <input 
+      type="date" 
+      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+      value={form.issueDate} 
+      onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))} 
+    />
+  </div>
+</div>
+
+<div className="grid grid-cols-2 gap-3">
+  <div>
+    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Cont IBAN</label>
+    <input 
+      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+      value={form.bankAccount} 
+      onChange={e => setForm(f => ({ ...f, bankAccount: e.target.value }))} 
+      placeholder="RO00BTRL..." 
+    />
+  </div>
+  <div>
+    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Status plată</label>
+    <select 
+      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+      value={form.paymentStatus} 
+      onChange={e => setForm(f => ({ ...f, paymentStatus: e.target.value }))}
+    >
+      <option>Neplătit</option>
+      <option>Plătit</option>
+      <option>În curs</option>
+    </select>
+  </div>
+</div>
 
               {/* Stock linking */}
               {form.category === 'Stoc produse' && (
@@ -467,7 +593,7 @@ export default function Tranzactii() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Scadență</label>
+                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Scadență aprobare</label>
                   <input type="date" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
                     value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
                 </div>
@@ -505,7 +631,7 @@ export default function Tranzactii() {
                   className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5]">
                   Anulează
                 </button>
-                <button type="submit" disabled={actionLoading}
+                <button type="submit" disabled={actionLoading || loadingScan}
                   className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-60"
                   style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
                   {actionLoading ? 'Se salvează...' : 'Înregistrează'}

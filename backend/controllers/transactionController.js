@@ -9,7 +9,7 @@ exports.createTransaction = async (req, res) => {
       type, documentType, supplier, category,
       netAmount, tva, totalAmount,
       dueDate, paymentMethod, notes,
-      stockItem, stockQuantityDelta,
+      stockItem, stockQuantityDelta, documentNumber, bankAccount, issueDate, paymentStatus
     } = req.body;
 
     // Validare: dacă e Stoc produse, trebuie să aibă un item și cantitate
@@ -51,6 +51,10 @@ exports.createTransaction = async (req, res) => {
       stockQuantityDelta: category === 'Stoc produse' ? parseInt(stockQuantityDelta) : 0,
       createdBy: req.user._id,
       status: 'În așteptare',
+      documentNumber: documentNumber || '',
+      bankAccount: bankAccount || '',
+      issueDate: issueDate || undefined,
+      paymentStatus: paymentStatus || 'Neplătit'
       // IMPORTANT: la creare nu se modifică nimic în sold sau stoc
     });
 

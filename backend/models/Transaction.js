@@ -15,17 +15,37 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // --- CÂMPURI NOI ADĂUGATE ---
+    documentNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    bankAccount: {
+      type: String,
+      trim: true,
+      default: '', // IBAN-ul extras de pe factură
+    },
+    issueDate: {
+      type: Date,
+      default: null, // Data emiterii înscrisă pe document
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['Neplătit', 'Plătit', 'În curs'],
+      default: 'Neplătit',
+    },
+    // ----------------------------
     supplier: {
       type: String,
       required: [true, 'Furnizorul/Clientul este obligatoriu'],
       trim: true,
     },
-
     cui: {
-  type: String,
-  trim: true,
-  default: null,
-},
+      type: String,
+      trim: true,
+      default: null,
+    },
     category: {
       type: String,
       required: [true, 'Categoria este obligatorie'],
@@ -43,12 +63,8 @@ const transactionSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    currency: {
-      type: String,
-      default: 'RON',
-    },
     dueDate: {
-      type: Date,
+      type: Date, // Rămâne neschimbat: data limită pentru aprobarea managerului
     },
     paymentMethod: {
       type: String,

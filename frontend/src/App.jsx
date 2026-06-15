@@ -6,9 +6,9 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Tranzactii from './pages/Tranzactii'
 import Stocuri from './pages/Stocuri'
-import Rapoarte from './pages/Rapoarte'
 import Utilizatori from './pages/Utilizatori'
 import AuditLog from './pages/AuditLog'
+import Setari from './pages/Setari';
 
 export default function App() {
   return (
@@ -36,10 +36,6 @@ export default function App() {
                 <ProtectedRoute><Stocuri /></ProtectedRoute>
               } />
 
-              <Route path="/rapoarte" element={
-                <ProtectedRoute requiredRole="Manager"><Rapoarte /></ProtectedRoute>
-              } />
-
               <Route path="/utilizatori" element={
                 <ProtectedRoute requiredRole="Manager"><Utilizatori /></ProtectedRoute>
               } />
@@ -48,13 +44,15 @@ export default function App() {
                 <ProtectedRoute requiredRole="Manager"><AuditLog /></ProtectedRoute>
               } />
 
-              <Route path="/configurare" element={
-                <ProtectedRoute>
-                  <div className="flex h-screen items-center justify-center text-slate-400">
-                    Pagina de configurare â€” Ă®n curĂ˘nd
-                  </div>
-                </ProtectedRoute>
-              } />
+             {/* Înlocuiește vechea rută cu aceasta */}
+<Route 
+  path="/configurare" 
+  element={
+    <ProtectedRoute>
+      <Setari />
+    </ProtectedRoute>
+  } 
+/>
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

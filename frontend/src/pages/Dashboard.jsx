@@ -1,14 +1,18 @@
+import { useState, useEffect } from 'react' // CORECTAT: useState este acum definit corect aici
 import { useNavigate } from 'react-router-dom'
-import { Wallet, TrendingUp, TrendingDown, Clock, AlertTriangle, Check, AlertCircle, XCircle } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Clock, AlertTriangle, Check, AlertCircle, XCircle, FileText, Download } from 'lucide-react'
+import { pdf } from '@react-pdf/renderer'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import DashboardCard from '../components/DashboardCard'
+import ReportPDF from '../components/ReportPDF'
 import { ToastContainer } from '../components/Toast'
 import { useDashboard } from '../hooks/useDashboard'
 import { useStocks } from '../hooks/useStocks'
 import { useTransactions } from '../hooks/useTransactions'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import api from '../api' // Instanța ta globală de axios pentru asistentul AI
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
@@ -19,6 +23,19 @@ const formatRON = (n) =>
 
 const PIE_COLORS = ['#00a090', '#00c9b1', '#5dd8c8', '#b8e8e3']
 
+const MONTHS = [
+  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+]
+
+// Date simulate pentru orele logate săptămânal de angajat
+const MOCK_LOGGED_TIME = [
+  { week: 'Săpt 22', ore: 40 },
+  { week: 'Săpt 23', ore: 42 },
+  { week: 'Săpt 24', ore: 38 },
+  { week: 'Săpt 25', ore: 45 },
+]
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
@@ -28,7 +45,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <div key={p.dataKey} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span className="text-[#5a7a85]">{p.name}: </span>
-          <span className="font-semibold">{formatRON(p.value)}</span>
+          <span className="font-semibold">{p.name === 'Ore Lucrate' ? `${p.value} ore` : formatRON(p.value)}</span>
         </div>
       ))}
     </div>
@@ -39,16 +56,85 @@ export default function Dashboard() {
   const { stats, loading: statsLoading, downloadReport } = useDashboard()
   const { stocks, lowStockCount } = useStocks()
   const { transactions: recentTxns } = useTransactions()
-  const { isManager } = useAuth()
+  const { isManager, user } = useAuth()
   const { toasts, success, error: toastError, removeToast } = useToast()
   const navigate = useNavigate()
+
+  // Stări pentru asistentul AI virtual
+  const [aiQuestion, setAiQuestion] = useState('')
+  const [aiReply, setAiReply] = useState(
+    `Salut! Sunt asistentul tău digital. Îmi poți pune întrebări despre stocuri, despre statusul documentelor tale sau cum să folosești platforma EnterpriseFlow.`
+  )
+  const [loadingAi, setLoadingAi] = useState(false)
 
   const handleDownload = async () => {
     try {
       await downloadReport()
-      success('Raport descÄrcat cu succes!')
+      success('Raport descărcat cu succes!')
     } catch {
       toastError('Eroare la generarea raportului.')
+    }
+  }
+
+  const handleAiSubmit = async (e) => {
+    if (e) e.preventDefault()
+    if (!aiQuestion.trim() || loadingAi) return
+
+    const currentQuestion = aiQuestion
+    setAiQuestion('')
+    setLoadingAi(true)
+    setAiReply('Se gândește...')
+
+    try {
+      // REPARAT: Am eliminat prefixul /api duplicat deoarece este deja inclus automat în instanța ta "api"
+      const response = await api.post('/ai-assistant/chat', { message: currentQuestion })
+      if (response.data.success) {
+        setAiReply(response.data.reply)
+      }
+    } catch (error) {
+      console.error(error)
+      setAiReply('Ne pare rău, a intervenit o eroare de comunicare cu serverul AI. Încearcă din nou.')
+    } finally {
+      setLoadingAi(false)
+    }
+  }
+
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [downloadLoading, setDownloadLoading] = useState(false)
+
+  const handleMonthlyReportDownload = async () => {
+    if (downloadLoading) return
+    setDownloadLoading(true)
+
+    try {
+      const res = await api.get('/transactions/report/monthly', {
+        params: { month: selectedMonth, year: selectedYear }
+      })
+
+      const blob = await pdf(
+        <ReportPDF
+          month={selectedMonth}
+          year={selectedYear}
+          transactions={res.data.transactions}
+          newStockItems={res.data.newStockItems}
+          stats={res.data.stats}
+          generatedBy={`${user?.firstName} ${user?.lastName}`}
+        />
+      ).toBlob()
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `raport_${MONTHS[selectedMonth - 1].toLowerCase()}_${selectedYear}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      success('Raport descărcat!')
+    } catch (error) {
+      console.error(error)
+      toastError('Eroare la descărcarea raportului.')
+    } finally {
+      setDownloadLoading(false)
     }
   }
 
@@ -83,7 +169,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* KPI Cards */}
+          {/* TOȚI UTILIZATORII (Manager și Angajat) văd aceleași carduri globale de sus */}
           <div className="grid grid-cols-4 gap-4 mt-4">
             <DashboardCard
               label="Sold curent"
@@ -94,17 +180,17 @@ export default function Dashboard() {
               miniBar
             />
             <DashboardCard
-              label="Încasări mai"
+              label="Încasări luna curentă"
               value={formatRON(stats.monthlyIncome)}
-              change="+8,1% față de aprilie"
+              change="+8,1% față de luna trecută"
               color="glass"
               icon={TrendingUp}
               tag="Obiectiv atins"
             />
             <DashboardCard
-              label="Cheltuieli mai"
+              label="Cheltuieli luna curentă"
               value={formatRON(stats.monthlyExpenses)}
-              change="+3,2% față de aprilie"
+              change="+3,2% față de luna trecută"
               changeType="warn"
               color="white-amber"
               icon={TrendingDown}
@@ -118,12 +204,12 @@ export default function Dashboard() {
               changeType={pendingCount > 0 ? 'down' : 'up'}
               color="glass"
               icon={Clock}
-              tag="Manager notificat"
+              tag={isManager ? "Necesită decizie" : "Manager notificat"}
             />
           </div>
 
-          {/* Charts - Manager only */}
-          {isManager && (
+          {/* CONDIȚIONARE DOAR PE MIJLOCUL ECRANULUI */}
+          {isManager ? (
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-2xl border border-[#d8edf0] p-5 transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl">
                 <div className="flex items-center justify-between mb-4">
@@ -156,7 +242,7 @@ export default function Dashboard() {
                     <span className="w-0.5 h-3.5 bg-gradient-to-b from-[#00c9b1] to-[#0096a0] rounded-sm inline-block" />
                     Evoluția soldului 2026
                   </h3>
-                  <span className="text-[11px] text-[#8ab0b8]">luna Mai</span>
+                  <span className="text-[11px] text-[#8ab0b8]">Actualizat curent</span>
                 </div>
                 <ResponsiveContainer width="100%" height={155}>
                   <LineChart data={stats.monthlyBreakdown?.map((m, i, arr) => ({
@@ -207,9 +293,132 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+          ) : (
+            /* PANOU SPECIAL PENTRU ANGAJAT: ORE LOGATE ȘI CHAT-UL CU INTELIGENȚA ARTIFICIALĂ GEMINI */
+            <div className="grid grid-cols-2 gap-4">
+              
+              {/* CARD: STATISTICĂ SĂPTĂMÂNALĂ TIMP LUCRAT */}
+              <div className="bg-white rounded-2xl border border-[#d8edf0] p-5 flex flex-col justify-between h-[235px] transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[13.5px] font-semibold text-[#0d2b32] flex items-center gap-2">
+                    <span className="w-0.5 h-3.5 bg-gradient-to-b from-[#00b8a4] to-[#0096a0] rounded-sm inline-block" />
+                    Ore Lucrate Raportate (Săptămânal)
+                  </h3>
+                  <span className="text-[10px] bg-[#e0f7f5] text-[#0f6e56] font-semibold px-2 py-0.5 rounded-full border border-[#9fe1cb]">Normă Întreagă</span>
+                </div>
+                
+                <div className="flex-1 mt-1">
+                  <ResponsiveContainer width="100%" height={140}>
+                    <BarChart data={MOCK_LOGGED_TIME} barSize={26}>
+                      <CartesianGrid vertical={false} stroke="#dff0f3" strokeDasharray="3 3" />
+                      <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#6b9aa5' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: '#6b9aa5' }} axisLine={false} tickLine={false} unit=" h" domain={[0, 50]} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="ore" name="Ore Lucrate" fill="#00c9b1" radius={[5, 5, 0, 0]} fillOpacity={0.85}>
+                        {MOCK_LOGGED_TIME.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.ore > 40 ? '#ef9f27' : '#00a090'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* CARD: ASISTENT AI COMPLET FUNCTIONAL (DOAR PENTRU ANGAJAT) */}
+              <div className="bg-white rounded-2xl border border-[#d8edf0] p-5 flex flex-col justify-between h-[235px] transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600 text-sm">🤖</span>
+                    <div>
+                      <h3 className="text-[13.5px] font-semibold text-[#0d2b32]">Asistent AI Virtual</h3>
+                      <p className="text-[10.5px] text-[#6b9aa5]">Suport operațional conectat la datele tale</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-[#f5fcfc] border border-[#cce8ec] rounded-xl p-3 text-[12px] text-[#0d2b32] font-light leading-relaxed h-[110px] overflow-y-auto whitespace-pre-line">
+                    {aiReply}
+                  </div>
+                </div>
+
+                <form onSubmit={handleAiSubmit} className="mt-2 flex gap-2">
+                  <input 
+                    type="text" 
+                    value={aiQuestion}
+                    onChange={e => setAiQuestion(e.target.value)}
+                    placeholder={loadingAi ? "Se generează răspunsul..." : "Pune o întrebare asistentului..."} 
+                    disabled={loadingAi}
+                    className="flex-1 px-3 py-1.5 text-xs border border-[#d8edf0] rounded-xl outline-none focus:border-[#00b8a4] text-[#0d2b32] disabled:opacity-60"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={loadingAi || !aiQuestion.trim()}
+                    className="px-3 py-1.5 text-white text-xs font-medium rounded-xl transition-all disabled:opacity-40 flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}
+                  >
+                    {loadingAi ? '...' : 'Trimite'}
+                  </button>
+                </form>
+              </div>
+
+            </div>
           )}
 
-          {/* Bottom row */}
+          {isManager && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="bg-white rounded-2xl border border-[#d8edf0] p-5 lg:col-span-1">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#8ab0b8] uppercase tracking-wider">Raport lunar</p>
+                    <h3 className="text-[15px] font-semibold text-[#0d2b32] mt-1">Descarcă PDF</h3>
+                  </div>
+                  <div className="w-10 h-10 rounded-2xl bg-[#e0f7f5] text-[#00796b] flex items-center justify-center">
+                    <FileText size={18} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Lună</label>
+                    <select
+                      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(Number(e.target.value))}
+                    >
+                      {MONTHS.map((m, i) => (
+                        <option key={m} value={i + 1}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">An</label>
+                    <select
+                      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
+                      value={selectedYear}
+                      onChange={e => setSelectedYear(Number(e.target.value))}
+                    >
+                      {[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleMonthlyReportDownload}
+                  disabled={downloadLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold text-white disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}
+                >
+                  <Download size={14} />
+                  {downloadLoading ? 'Se generează...' : `Descarcă ${MONTHS[selectedMonth - 1]} ${selectedYear}`}
+                </button>
+
+                <p className="text-[11px] text-[#6b9aa5] mt-3">Fără încărcare suplimentară. Raportul se generează direct.</p>
+              </div>
+            </div>
+          )}
+
+          {/* TOȚI UTILIZATORII (Manager și Angajat) văd rândul final de jos cu Tranzacții și Stocuri */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white rounded-2xl border border-[#d8edf0] p-5 transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl">
               <div className="flex items-center justify-between mb-4">
@@ -226,12 +435,12 @@ export default function Dashboard() {
                   const isIn = txn.type === 'Venit'
                   return (
                     <div key={txn._id} className="flex items-center gap-3 py-2.5">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isIn ? 'bg-[#e0f7f5] text-[#00796b]' : txn.status === 'ĂŽn aČ™teptare' ? 'bg-[#faeeda] text-[#854f0b]' : 'bg-[#fcebeb] text-[#a32d2d]'}`}>
-                        {isIn ? <TrendingUp size={14} /> : txn.status === 'ĂŽn aČ™teptare' ? <Clock size={14} /> : <TrendingDown size={14} />}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isIn ? 'bg-[#e0f7f5] text-[#00796b]' : txn.status === 'În așteptare' ? 'bg-[#faeeda] text-[#854f0b]' : 'bg-[#fcebeb] text-[#a32d2d]'}`}>
+                        {isIn ? <TrendingUp size={14} /> : txn.status === 'În așteptare' ? <Clock size={14} /> : <TrendingDown size={14} />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12.5px] font-medium text-[#0d2b32] truncate">{txn.supplier}</p>
-                        <p className="text-[11px] text-[#8ab0b8]">{txn.reference}</p>
+                        <p className="text-[11px] text-[#8ab0b8] font-mono">{txn.reference}</p>
                       </div>
                       <div className="text-right">
                         <p className={`text-[13px] font-semibold ${isIn ? 'text-[#0f6e56]' : 'text-[#a32d2d]'}`}>
@@ -271,7 +480,7 @@ export default function Dashboard() {
                         : <XCircle size={14} className="text-[#e24b4a]" />}
                     </div>
                   ))}
-                  {stocks.length === 0 && <p className="text-sm text-[#8ab0b8] text-center py-2">Niciun produs</p>}
+                  {stocks.length === 0 && <p className="text-sm text-[#8ab0b8] text-center py-2">Niciun produs în nomenclator</p>}
                 </div>
               </div>
             </div>

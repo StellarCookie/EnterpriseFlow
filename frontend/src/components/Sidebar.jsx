@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, Receipt, Package, FileText,
+  LayoutDashboard, Receipt, Package,
   Users, Settings, LogOut, TrendingUp, ChevronsRight
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -12,7 +12,6 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Tablou de bord', section: 'principal' },
   { to: '/tranzactii', icon: Receipt, label: 'TranzacČ›ii', section: 'principal', badge: true },
   { to: '/stocuri', icon: Package, label: 'Stocuri', section: 'principal' },
-  { to: '/rapoarte', icon: FileText, label: 'Rapoarte PDF', section: 'principal' },
   { to: '/utilizatori', icon: Users, label: 'Utilizatori', section: 'sistem', managerOnly: true },
   { to: '/configurare', icon: Settings, label: 'Configurare', section: 'sistem' },
   { to: '/audit', icon: ClipboardList, label: 'Audit Log', section: 'sistem', managerOnly: true },
@@ -51,8 +50,7 @@ export default function Sidebar({ pendingCount = 0 }) {
 
   const principalItems = navItems.filter(i =>
     i.section === 'principal' &&
-    (!i.managerOnly || isManager) &&
-    !(isAngajat && i.to === '/rapoarte')
+    (!i.managerOnly || isManager)
   )
   const sistemItems = navItems.filter(i =>
     i.section === 'sistem' &&

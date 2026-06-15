@@ -8,6 +8,9 @@ const authRoutes = require('./routes/authRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const stockRoutes = require('./routes/stockRoutes');
 const audit = require('./routes/audit'); 
+const ocrRoutes = require('./routes/ocrRoutes');
+const aiAssistantRoutes = require('./routes/aiAssistantRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 connectDB();
 
@@ -26,7 +29,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/audit', audit);                
-
+app.use('/api/ocr', ocrRoutes);
+app.use('/api/assistant', aiAssistantRoutes);
+app.use('/api/ai-assistant', aiRoutes); // Rute pentru funcționalități AI generale (ex: sumarizare, analiză de text, etc.)
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString(), app: 'EnterpriseFlow API' });
