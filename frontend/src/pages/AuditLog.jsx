@@ -17,9 +17,13 @@ const ACTION_CONFIG = {
   LOGOUT: { label: 'Deconectat', color: 'bg-slate-100 text-slate-600',     Icon: LogOut  },
 };
 
+// CORECTAT: Înlocuit Comandă cu Document și păstrat restul conform cerinței
 const ENTITY_LABELS = {
-  Product: 'Produs', Order: 'Comandă', Invoice: 'Factură',
-  User: 'Utilizator', Stock: 'Stoc'
+  Order: 'Document',
+  Invoice: 'Factură',
+  User: 'Utilizator',
+  Stock: 'Stoc',
+  Product: 'Produs'
 };
 
 const fmt = (iso) => {
@@ -27,6 +31,10 @@ const fmt = (iso) => {
   return d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
     + ' ' + d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 };
+
+// Formatare RON utilă pentru afișarea sumei la documente
+const formatRON = (n) =>
+  new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0 }).format(Math.round(n || 0)) + ' RON';
 
 // Compară before/after și returnează câmpurile modificate
 const getDiff = (before, after) => {
@@ -54,9 +62,52 @@ const DiffRow = ({ field, before, after }) => (
 
 const LogRow = ({ log }) => {
   const [open, setOpen] = useState(false);
+  const { isManager } = useAuth(); // Preluăm rolul pentru a decide ce detalii afișăm
+  
   const cfg  = ACTION_CONFIG[log.action] || ACTION_CONFIG.UPDATE;
   const diff = log.changes ? getDiff(log.changes.before, log.changes.after) : [];
   const hasDiff = diff.length > 0;
+
+  // Logica optimizată de afișare dinamică și securizată în coloana de entitate
+  const renderEntityDetails = () => {
+    if (log.entity === 'User') {
+      // 1. Când este utilizator, nu apare numele lui în textul secundar
+      return null;
+    }
+
+    if (log.entity === 'Order') {
+      // Preluăm numărul de identificare (reference) din modificări sau din fallback-ul entityName
+      const docNr = log.changes?.after?.reference || log.changes?.before?.reference || log.entityName;
+      // Preluăm statusul documentului (Aprobat/Respins/În așteptare)
+      const docStatus = log.changes?.after?.status || log.changes?.before?.status;
+
+      // Afișarea pentru toți utilizatorii: se vede numărul documentului și statusul
+      return (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-[#0d2b32] bg-[#f0f8fa] px-2 py-0.5 rounded-md border border-[#d8edf0]">
+            {docNr}
+          </span>
+          {docStatus && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              docStatus === 'Aprobat' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+              docStatus === 'Respins' ? 'bg-red-50 text-red-700 border border-red-200' :
+              'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+              {docStatus}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (log.entity === 'Stock') {
+      // 4. La stoc se preia DOAR numele său (curat, eliminând eventuale ID-uri)
+      const numeStoc = log.changes?.after?.name || log.changes?.before?.name || log.entityName;
+      return <span className="text-[#0d2b32] font-medium">{numeStoc}</span>;
+    }
+
+    return log.entityName;
+  };
 
   return (
     <>
@@ -73,9 +124,13 @@ const LogRow = ({ log }) => {
         </td>
 
         {/* Entitate */}
-        <td className="px-5 py-3 text-[12px] text-[#0d2b32] font-medium">
-          <span className="text-[#8ab0b8] mr-1">{ENTITY_LABELS[log.entity] || log.entity}</span>
-          {log.entityName}
+        <td className="px-5 py-3 text-[12px]">
+          <span className="text-[#8ab0b8] mr-2 font-normal">
+            {ENTITY_LABELS[log.entity] || log.entity}
+          </span>
+          <div className="inline-block align-middle">
+            {renderEntityDetails()}
+          </div>
         </td>
 
         {/* Utilizator */}
@@ -125,14 +180,14 @@ export default function AuditLogPage() {
   const [pages,      setPages]      = useState(1);
   const [page,       setPage]       = useState(1);
   const [loading,    setLoading]    = useState(true);
-  const [users,      setUsers]      = useState([]);   // pentru filtrul Manager
-  const [pendingCount, setPendingCount] = useState(0); // pentru Sidebar
+  const [users,      setUsers]      = useState([]);   
+  const [pendingCount, setPendingCount] = useState(0); 
 
   const [filters, setFilters] = useState({
     entity: '', action: '', userId: '', startDate: '', endDate: ''
   });
 
-const { user, isManager } = useAuth();
+  const { user, isManager } = useAuth();
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -145,13 +200,13 @@ const { user, isManager } = useAuth();
         headers: { Authorization: `Bearer ${token}` }
       });
       const data  = await res.json();
-       console.log('AUDIT RESPONSE:', data);
+      console.log('AUDIT RESPONSE:', data);
       setLogs(data.logs || []);
-setTotal(data.total || 0);
-setPages(data.pages || 1);
+      setTotal(data.total || 0);
+      setPages(data.pages || 1);
     }  catch(err) {
-    console.error('AUDIT ERROR:', err);   }
-     finally {
+      console.error('AUDIT ERROR:', err);   
+    } finally {
       setLoading(false);
     }
   }, [page, filters]);
@@ -189,11 +244,17 @@ setPages(data.pages || 1);
             <div className="flex items-center gap-3 flex-wrap">
               <Filter size={14} className="text-[#8ab0b8]" />
 
+              {/* REPARAT: Filtrul conține doar opțiunile Document (Order), Utilizator (User) și Stoc (Stock) */}
               <select value={filters.entity} onChange={e => setFilter('entity', e.target.value)}
-                className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1] bg-white">
+                className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1] bg-white font-medium">
                 <option value="">Toate entitățile</option>
-                {['Product','Order','Invoice','User','Stock'].map(e =>
-                  <option key={e} value={e}>{ENTITY_LABELS[e]}</option>)}
+                {[
+                  { key: 'Order', label: 'Document' },
+                  { key: 'User',  label: 'Utilizator' },
+                  { key: 'Stock', label: 'Stoc' }
+                ].map(e =>
+                  <option key={e.key} value={e.key}>{e.label}</option>
+                )}
               </select>
 
               <select value={filters.action} onChange={e => setFilter('action', e.target.value)}
