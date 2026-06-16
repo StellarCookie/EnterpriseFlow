@@ -69,4 +69,13 @@ router.get('/users', protect, restrictTo('Manager'), getUsers);
 router.patch('/users/:id/role', protect, restrictTo('Manager'), updateUserRole);
 router.patch('/users/:id/toggle-active', protect, restrictTo('Manager'), toggleUserActive);
 
+router.delete('/me', protect, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user._id);
+    res.status(200).json({ success: true, message: 'Contul a fost șters.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

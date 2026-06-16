@@ -65,6 +65,8 @@ export default function Tranzactii() {
   const [filter, setFilter] = useState('Toate')
   const [selected, setSelected] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [deletePending, setDeletePending] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
   const [showRejectInput, setShowRejectInput] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
@@ -72,7 +74,7 @@ export default function Tranzactii() {
   const [form, setForm] = useState(resetForm)
   const [customFields, setCustomFields] = useState(resetCustom)
 
-  const { transactions, loading, pendingCount, approve, reject, create, refetch } = useTransactions(filter === 'Toate' ? null : filter)
+  const { transactions, loading, pendingCount, approve, reject, create, update, remove, refetch } = useTransactions(filter === 'Toate' ? null : filter)
   const { stocks } = useStocks()
   const { isManager, user } = useAuth()
   const { toasts, success, error: toastError, removeToast } = useToast()
@@ -95,8 +97,34 @@ export default function Tranzactii() {
 
   const closeForm = () => {
     setShowForm(false)
+    setEditMode(false)
     setForm(resetForm)
     setCustomFields(resetCustom)
+  }
+
+  const openEdit = () => {
+    if (!selected) return
+    setForm({
+      type: selected.type || 'Cheltuială',
+      documentType: selected.documentType || 'Factură',
+      supplier: selected.supplier || '',
+      cui: selected.cui || '',
+      category: selected.category || 'Furnizori',
+      netAmount: selected.netAmount || '',
+      tva: selected.tva ?? 19,
+      totalAmount: selected.totalAmount || '',
+      dueDate: selected.dueDate ? selected.dueDate.slice(0, 10) : '',
+      paymentMethod: selected.paymentMethod || 'Transfer bancar',
+      notes: selected.notes || '',
+      stockItem: selected.stockItem?._id || selected.stockItem || '',
+      stockQuantityDelta: selected.stockQuantityDelta || '',
+      documentNumber: selected.documentNumber || '',
+      bankAccount: selected.bankAccount || '',
+      issueDate: selected.issueDate ? selected.issueDate.slice(0, 10) : '',
+      paymentStatus: selected.paymentStatus || 'Neplătit',
+    })
+    setEditMode(true)
+    setShowForm(true)
   }
 
   const handleCreate = async (e) => {
@@ -109,6 +137,35 @@ export default function Tranzactii() {
       setSelected(newTxn)
     } catch (err) {
       toastError(err.response?.data?.message || 'Eroare la înregistrare.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleUpdate = async (e) => {
+    e.preventDefault()
+    setActionLoading(true)
+    try {
+      const updated = await update(selected._id, form)
+      success('Tranzacție actualizată.')
+      closeForm()
+      setSelected(updated)
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Eroare la actualizare.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setActionLoading(true)
+    try {
+      await remove(selected._id)
+      success('Tranzacție ștearsă.')
+      setSelected(null)
+      setDeletePending(false)
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Eroare la ștergere.')
     } finally {
       setActionLoading(false)
     }
@@ -270,7 +327,7 @@ export default function Tranzactii() {
               const isIn = txn.type === 'Venit'
               const isSel = selected?._id === txn._id
               return (
-                <div key={txn._id} onClick={() => setSelected(txn)}
+                <div key={txn._id} onClick={() => { setSelected(txn); setDeletePending(false) }}
                   className="bg-white border rounded-xl p-3.5 cursor-pointer transition-all relative overflow-hidden"
                   style={{ borderColor: isSel ? '#00c9b1' : '#d8edf0', boxShadow: isSel ? '0 0 0 3px rgba(0,201,177,.1)' : '' }}>
                   {isSel && <div className="absolute top-0 left-0 bottom-0 w-[3px] rounded-r-full" style={{ background: 'linear-gradient(180deg,#00c9b1,#0096a0)' }} />}
@@ -390,11 +447,42 @@ export default function Tranzactii() {
                 </div>
               )}
 
-              {/* Info for Angajat - read only on approved/rejected */}
-              {!isManager && selected.status !== 'În așteptare' && (
+              {/* Angajat actions — edit & delete only on own pending transactions */}
+              {!isManager && selected.status !== 'Aprobat' && (
+                <div className="px-5 pb-5 border-t border-[#edf5f7] pt-4 flex-shrink-0">
+                  {!deletePending ? (
+                    <div className="flex gap-3">
+                      <button onClick={openEdit}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5] hover:border-[#00c9b1] transition-colors">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Editează
+                      </button>
+                      <button onClick={() => setDeletePending(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-[#fcebeb] border border-[#f7c1c1] text-[#a32d2d] hover:bg-[#f9d5d5] transition-colors">
+                        <X size={13} /> Șterge
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-[12.5px] text-[#0d2b32]">Ești sigur că vrei să ștergi această tranzacție?</span>
+                      <button onClick={handleDelete} disabled={actionLoading}
+                        className="px-4 py-2 rounded-xl text-[12px] font-medium bg-[#a32d2d] text-white disabled:opacity-60">
+                        {actionLoading ? 'Se șterge...' : 'Da, șterge'}
+                      </button>
+                      <button onClick={() => setDeletePending(false)} disabled={actionLoading}
+                        className="px-4 py-2 rounded-xl text-[12px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5]">
+                        Anulează
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Info for Angajat - read only on approved */}
+              {!isManager && selected.status === 'Aprobat' && (
                 <div className="px-5 pb-4 pt-3 border-t border-[#edf5f7] flex-shrink-0">
                   <p className="text-[12px] text-[#8ab0b8] text-center">
-                    Această tranzacție a fost {selected.status === 'Aprobat' ? 'aprobată' : 'respinsă'} de manager.
+                    Această tranzacție a fost aprobată de manager și nu mai poate fi modificată.
                   </p>
                 </div>
               )}
@@ -412,29 +500,31 @@ export default function Tranzactii() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-[#d8edf0] flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-[#0d2b32]">Tranzacție nouă</h3>
+              <h3 className="text-[15px] font-semibold text-[#0d2b32]">{editMode ? 'Editare tranzacție' : 'Tranzacție nouă'}</h3>
               <button onClick={closeForm} className="text-[#8ab0b8] hover:text-[#0d2b32]"><X size={18} /></button>
             </div>
-            <form onSubmit={handleCreate} className="p-5 space-y-4">
+            <form onSubmit={editMode ? handleUpdate : handleCreate} className="p-5 space-y-4">
               
-              {/* ZONĂ NOUĂ: Panou dedicat pentru scanare și procesare rapidă prin OCR */}
-              <div className="p-4 bg-[#f5fcfc] border border-dashed border-[#9fe1cb] rounded-xl text-center">
-                <p className="text-[12px] text-[#0d2b32] mb-2 font-medium">
-                  {loadingScan ? "Se procesează documentul..." : "Completare automată inteligentă"}
-                </p>
-                <label className={`inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[12px] font-medium shadow-sm hover:bg-indigo-700 cursor-pointer transition-all ${loadingScan ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <Camera size={14} />
-                  <span>{loadingScan ? 'Procesare OCR în curs...' : 'Scanează Poză / PDF Factură'}</span>
-                  <input 
-                    type="file" 
-                    accept="image/*,application/pdf" 
-                    className="hidden" 
-                    onChange={handleInvoiceScan}
-                    disabled={loadingScan}
-                  />
-                </label>
-                <p className="text-[10px] text-[#6b9aa5] mt-1.5 font-light">Sistemul va extrage automat CUI, Furnizor, Sumă și Dată</p>
-              </div>
+              {/* OCR scan — only when creating, not editing */}
+              {!editMode && (
+                <div className="p-4 bg-[#f5fcfc] border border-dashed border-[#9fe1cb] rounded-xl text-center">
+                  <p className="text-[12px] text-[#0d2b32] mb-2 font-medium">
+                    {loadingScan ? "Se procesează documentul..." : "Completare automată inteligentă"}
+                  </p>
+                  <label className={`inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[12px] font-medium shadow-sm hover:bg-indigo-700 cursor-pointer transition-all ${loadingScan ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <Camera size={14} />
+                    <span>{loadingScan ? 'Procesare OCR în curs...' : 'Scanează Poză / PDF Factură'}</span>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={handleInvoiceScan}
+                      disabled={loadingScan}
+                    />
+                  </label>
+                  <p className="text-[10px] text-[#6b9aa5] mt-1.5 font-light">Sistemul va extrage automat CUI, Furnizor, Sumă și Dată</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -634,7 +724,7 @@ export default function Tranzactii() {
                 <button type="submit" disabled={actionLoading || loadingScan}
                   className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-60"
                   style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
-                  {actionLoading ? 'Se salvează...' : 'Înregistrează'}
+                  {actionLoading ? 'Se salvează...' : editMode ? 'Salvează modificările' : 'Înregistrează'}
                 </button>
               </div>
             </form>

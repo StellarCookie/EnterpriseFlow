@@ -49,7 +49,18 @@ export function useTransactions(statusFilter = 'Toate') {
     return res.data.data
   }, [])
 
+  const update = useCallback(async (id, payload) => {
+    const res = await api.patch(`/transactions/${id}`, payload)
+    setTransactions(prev => prev.map(t => t._id === id ? { ...t, ...res.data.data } : t))
+    return res.data.data
+  }, [])
+
+  const remove = useCallback(async (id) => {
+    await api.delete(`/transactions/${id}`)
+    setTransactions(prev => prev.filter(t => t._id !== id))
+  }, [])
+
   const pendingCount = transactions.filter(t => t.status === 'În așteptare').length
 
-  return { transactions, loading, error, refetch: fetch, approve, reject, create, pendingCount }
+  return { transactions, loading, error, refetch: fetch, approve, reject, create, update, remove, pendingCount }
 }

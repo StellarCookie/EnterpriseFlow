@@ -225,6 +225,65 @@ exports.rejectTransaction = async (req, res) => {
   }
 };
 
+// PATCH /api/transactions/:id — Angajat poate edita propria tranzacție în așteptare
+exports.updateTransaction = async (req, res) => {
+  try {
+    const txn = await Transaction.findById(req.params.id);
+    if (!txn) return res.status(404).json({ success: false, message: 'Tranzacția nu a fost găsită.' });
+
+    if (txn.createdBy.toString() !== req.user._id.toString())
+      return res.status(403).json({ success: false, message: 'Nu ai permisiunea să editezi această tranzacție.' });
+
+    if (txn.status === 'Aprobat')
+      return res.status(400).json({ success: false, message: 'Nu poți edita o tranzacție aprobată.' });
+
+    const allowed = ['type', 'documentType', 'documentNumber', 'supplier', 'cui', 'category',
+      'netAmount', 'tva', 'totalAmount', 'dueDate', 'paymentMethod', 'notes',
+      'stockItem', 'stockQuantityDelta', 'bankAccount', 'issueDate', 'paymentStatus'];
+    allowed.forEach(f => { if (req.body[f] !== undefined) txn[f] = req.body[f]; });
+
+    // Re-submit for approval if it was previously rejected
+    if (txn.status === 'Respins') {
+      txn.status = 'În așteptare';
+      txn.rejectionReason = '';
+      txn.approvedBy = null;
+      txn.approvedAt = null;
+    }
+
+    const net = parseFloat(txn.netAmount) || 0;
+    const tva = parseFloat(txn.tva) || 0;
+    txn.totalAmount = +(net + net * tva / 100).toFixed(2);
+
+    await txn.save();
+    await txn.populate('createdBy', 'firstName lastName');
+    await txn.populate('approvedBy', 'firstName lastName');
+
+    res.status(200).json({ success: true, data: txn });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE /api/transactions/:id — Angajat poate șterge propria tranzacție în așteptare
+exports.deleteTransaction = async (req, res) => {
+  try {
+    const txn = await Transaction.findById(req.params.id);
+    if (!txn) return res.status(404).json({ success: false, message: 'Tranzacția nu a fost găsită.' });
+
+    if (txn.createdBy.toString() !== req.user._id.toString())
+      return res.status(403).json({ success: false, message: 'Nu ai permisiunea să ștergi această tranzacție.' });
+
+    if (txn.status === 'Aprobat')
+      return res.status(400).json({ success: false, message: 'Nu poți șterge o tranzacție aprobată.' });
+
+    req._auditOriginalDoc = { supplier: txn.supplier, documentNumber: txn.documentNumber };
+    await Transaction.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: 'Tranzacție ștearsă.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // GET /api/transactions/stats/dashboard — Manager vede tot, Angajat vede limitat
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -270,28 +329,42 @@ exports.getDashboardStats = async (req, res) => {
 
     // Breakdown pe ultimele 6 luni
     const lunaNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthlyBreakdown = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
-      const [inc, exp] = await Promise.all([
-        Transaction.aggregate([
-          { $match: { ...baseFilter, type: 'Venit', status: 'Aprobat', createdAt: { $gte: start, $lte: end } } },
-          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-        ]),
-        Transaction.aggregate([
-          { $match: { ...baseFilter, type: 'Cheltuială', status: 'Aprobat', createdAt: { $gte: start, $lte: end } } },
-          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-        ]),
-      ]);
-      monthlyBreakdown.push({
-        month: lunaNames[d.getMonth()],
-        year: d.getFullYear(),
-        income: inc[0]?.total || 0,
-        expenses: exp[0]?.total || 0,
-      });
-    }
+    const monthDates = Array.from({ length: 6 }, (_, idx) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+      return { label: lunaNames[d.getMonth()], year: d.getFullYear(), start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59) };
+    });
+
+    // Breakdown pe ultimele 4 trimestre
+    const currentQ = Math.floor(now.getMonth() / 3);
+    const quarterDates = Array.from({ length: 4 }, (_, idx) => {
+      let q = currentQ - (3 - idx); let y = now.getFullYear();
+      if (q < 0) { q += 4; y -= 1; }
+      return { label: `T${q + 1} '${String(y).slice(2)}`, start: new Date(y, q * 3, 1), end: new Date(y, q * 3 + 3, 0, 23, 59, 59) };
+    });
+
+    // Breakdown pe ultimii 3 ani
+    const yearDates = [2, 1, 0].map(i => {
+      const y = now.getFullYear() - i;
+      return { label: String(y), start: new Date(y, 0, 1), end: new Date(y, 11, 31, 23, 59, 59) };
+    });
+
+    const makeBreakdownQueries = (dates) =>
+      Promise.all(dates.map(({ start, end }) =>
+        Promise.all([
+          Transaction.aggregate([{ $match: { ...baseFilter, type: 'Venit', status: 'Aprobat', createdAt: { $gte: start, $lte: end } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
+          Transaction.aggregate([{ $match: { ...baseFilter, type: 'Cheltuială', status: 'Aprobat', createdAt: { $gte: start, $lte: end } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
+        ])
+      ));
+
+    const [monthlyResults, quarterlyResults, yearlyResults] = await Promise.all([
+      makeBreakdownQueries(monthDates),
+      makeBreakdownQueries(quarterDates),
+      makeBreakdownQueries(yearDates),
+    ]);
+
+    const monthlyBreakdown  = monthDates.map(({ label, year }, i)  => ({ month: label, year, income: monthlyResults[i][0][0]?.total || 0, expenses: monthlyResults[i][1][0]?.total || 0 }));
+    const quarterlyBreakdown = quarterDates.map(({ label }, i) => ({ month: label, income: quarterlyResults[i][0][0]?.total || 0, expenses: quarterlyResults[i][1][0]?.total || 0 }));
+    const yearlyBreakdown   = yearDates.map(({ label }, i)   => ({ month: label, income: yearlyResults[i][0][0]?.total || 0, expenses: yearlyResults[i][1][0]?.total || 0 }));
 
     const totalIncome = incomeAgg[0]?.total || 0;
     const totalExpenses = expenseAgg[0]?.total || 0;
@@ -306,6 +379,8 @@ exports.getDashboardStats = async (req, res) => {
         pendingCount,
         categoryBreakdown: categoryAgg,
         monthlyBreakdown,
+        quarterlyBreakdown,
+        yearlyBreakdown,
       },
     });
   } catch (error) {

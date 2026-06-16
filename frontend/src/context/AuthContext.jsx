@@ -7,23 +7,23 @@ export const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('ef_user')
+      const stored = sessionStorage.getItem('ef_user')
       return stored ? JSON.parse(stored) : null
     } catch { return null }
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('ef_token')
+    const token = sessionStorage.getItem('ef_token')
     if (token) {
       api.get('/auth/me')
         .then(res => {
           setUser(res.data.user)
-          localStorage.setItem('ef_user', JSON.stringify(res.data.user))
+          sessionStorage.setItem('ef_user', JSON.stringify(res.data.user))
         })
         .catch(() => {
-          localStorage.removeItem('ef_token')
-          localStorage.removeItem('ef_user')
+          sessionStorage.removeItem('ef_token')
+          sessionStorage.removeItem('ef_user')
           setUser(null)
         })
         .finally(() => setLoading(false))
@@ -35,15 +35,15 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const res = await api.post('/auth/login', { email, password })
     const { token, user: userData } = res.data
-    localStorage.setItem('ef_token', token)
-    localStorage.setItem('ef_user', JSON.stringify(userData))
+    sessionStorage.setItem('ef_token', token)
+    sessionStorage.setItem('ef_user', JSON.stringify(userData))
     setUser(userData)
     return userData
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('ef_token')
-    localStorage.removeItem('ef_user')
+    sessionStorage.removeItem('ef_token')
+    sessionStorage.removeItem('ef_user')
     setUser(null)
   }, [])
 

@@ -9,6 +9,8 @@ const EMPTY_STATS = {
   pendingCount: 0,
   categoryBreakdown: [],
   monthlyBreakdown: [],
+  quarterlyBreakdown: [],
+  yearlyBreakdown: [],
 }
 
 export function useDashboard() {

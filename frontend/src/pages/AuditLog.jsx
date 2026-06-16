@@ -211,7 +211,7 @@ export default function AuditLogPage() {
       const params = new URLSearchParams({ page, limit: 50 });
       Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));
 
-      const token = localStorage.getItem('ef_token');
+      const token = sessionStorage.getItem('ef_token');
       const res   = await fetch(`/api/audit?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -231,7 +231,7 @@ export default function AuditLogPage() {
 
   useEffect(() => {
     if (!isManager) return;
-    const token = localStorage.getItem('ef_token');
+    const token = sessionStorage.getItem('ef_token');
     fetch('/api/audit/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(setUsers);
   }, [isManager]);

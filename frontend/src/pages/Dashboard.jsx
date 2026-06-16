@@ -99,6 +99,7 @@ export default function Dashboard() {
     }
   }
 
+  const [fluxView, setFluxView] = useState('Lunar')
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [downloadLoading, setDownloadLoading] = useState(false)
@@ -143,6 +144,22 @@ export default function Dashboard() {
     name: c._id, value: Math.round(c.total)
   })) || []
 
+  // Month-over-month % change for the first 3 cards
+  const mb   = stats.monthlyBreakdown || []
+  const prev = mb[mb.length - 2] || { income: 0, expenses: 0 }
+  const prevBalance = (prev.income || 0) - (prev.expenses || 0)
+
+  const momPct = (current, previous) => {
+    if (!previous) return { label: previous === 0 && current > 0 ? 'nou față de luna trecută' : 'fără date luna trecută', positive: true }
+    const p = ((current - previous) / Math.abs(previous)) * 100
+    const sign = p >= 0 ? '+' : ''
+    return { label: `${sign}${p.toFixed(1)}% față de luna trecută`, positive: p >= 0 }
+  }
+
+  const balancePct  = momPct(stats.balance, prevBalance)
+  const incomePct   = momPct(stats.monthlyIncome, prev.income || 0)
+  const expensesPct = momPct(stats.monthlyExpenses, prev.expenses || 0)
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent', position: 'relative' }}>
 
@@ -174,7 +191,8 @@ export default function Dashboard() {
             <DashboardCard
               label="Sold curent"
               value={formatRON(stats.balance)}
-              change="+12,4% față de luna trecută"
+              change={balancePct.label}
+              changeType={balancePct.positive ? 'up' : 'down'}
               color="teal-dark"
               icon={Wallet}
               miniBar
@@ -182,20 +200,18 @@ export default function Dashboard() {
             <DashboardCard
               label="Încasări luna curentă"
               value={formatRON(stats.monthlyIncome)}
-              change="+8,1% față de luna trecută"
+              change={incomePct.label}
+              changeType={incomePct.positive ? 'up' : 'down'}
               color="glass"
               icon={TrendingUp}
-              tag="Obiectiv atins"
             />
             <DashboardCard
               label="Cheltuieli luna curentă"
               value={formatRON(stats.monthlyExpenses)}
-              change="+3,2% față de luna trecută"
-              changeType="warn"
+              change={expensesPct.label}
+              changeType={expensesPct.positive ? 'warn' : 'up'}
               color="white-amber"
               icon={TrendingDown}
-              progress={64}
-              progressLabel="Din buget lunar"
             />
             <DashboardCard
               label="Documente în așteptare"
@@ -215,16 +231,23 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-[13.5px] font-semibold text-[#0d2b32] flex items-center gap-2">
                     <span className="w-0.5 h-3.5 bg-gradient-to-b from-[#00c9b1] to-[#0096a0] rounded-sm inline-block" />
-                    Flux financiar 2026
+                    Flux financiar
                   </h3>
                   <div className="flex gap-1 bg-[#f0f8fa] rounded-lg p-1">
                     {['Lunar', 'Trim.', 'Anual'].map(t => (
-                      <button key={t} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${t === 'Lunar' ? 'bg-white text-[#0d2b32] font-medium shadow-sm' : 'text-[#8ab0b8]'}`}>{t}</button>
+                      <button key={t} onClick={() => setFluxView(t)}
+                        className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${t === fluxView ? 'bg-white text-[#0d2b32] font-medium shadow-sm' : 'text-[#8ab0b8] hover:text-[#0d2b32]'}`}>
+                        {t}
+                      </button>
                     ))}
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={155}>
-                  <BarChart data={stats.monthlyBreakdown || []} barSize={14} barGap={3}>
+                  <BarChart
+                    data={fluxView === 'Lunar' ? stats.monthlyBreakdown : fluxView === 'Trim.' ? stats.quarterlyBreakdown : stats.yearlyBreakdown}
+                    barSize={fluxView === 'Anual' ? 30 : 14}
+                    barGap={3}
+                  >
                     <CartesianGrid vertical={false} stroke="#dff0f3" />
                     <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#8ab0b8' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#8ab0b8' }} axisLine={false} tickLine={false}

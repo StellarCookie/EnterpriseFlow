@@ -41,7 +41,7 @@ export default function Sidebar({ pendingCount = 0 }) {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('ef_token')}` }
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('ef_token')}` }
       })
     } catch (_) {}
     logout()

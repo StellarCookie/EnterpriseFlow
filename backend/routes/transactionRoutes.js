@@ -6,6 +6,8 @@ const {
   getTransaction,
   approveTransaction,
   rejectTransaction,
+  updateTransaction,
+  deleteTransaction,
   getDashboardStats,
 } = require('../controllers/transactionController');
 const Transaction = require('../models/Transaction');
@@ -74,6 +76,16 @@ router.patch('/:id/reject',
   restrictTo('Manager'),
   auditLog('UPDATE', 'Order', () => 'Respingere'),
   rejectTransaction
+);
+
+router.patch('/:id',
+  auditLog('UPDATE', 'Order', (req, data) => data?.data?.supplier || 'Editare document'),
+  updateTransaction
+);
+
+router.delete('/:id',
+  auditLog('DELETE', 'Order', (req) => req._auditOriginalDoc?.supplier || 'Ștergere document'),
+  deleteTransaction
 );
 
 module.exports = router;

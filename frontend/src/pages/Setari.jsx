@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { User, Shield, Laptop, Smartphone, AlertTriangle, Key, LogOut, RefreshCw, Save } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, Shield, Laptop, Smartphone, AlertTriangle, Key, Trash2, RefreshCw, Save } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { ToastContainer } from '../components/Toast'
@@ -8,7 +9,8 @@ import { useAuth } from '../hooks/useAuth'
 import api from '../api' 
 
 export default function Setari() {
-  const { user } = useAuth() 
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const { toasts, success, error: toastError, removeToast } = useToast()
 
   const [userTitle, setUserTitle] = useState('')
@@ -21,6 +23,9 @@ export default function Setari() {
   })
   const [loadingPassword, setLoadingPassword] = useState(false)
   const [twoFactor, setTwoFactor] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [loadingDelete, setLoadingDelete] = useState(false)
+  const [resetPending, setResetPending] = useState(false)
 
   useEffect(() => {
     if (user && user.title) {
@@ -85,10 +90,22 @@ export default function Setari() {
     }
   }
 
-  const handleResetData = () => {
-    if (window.confirm('Ești sigur că vrei să resetezi datele demo? Toate tranzacțiile și stocurile personalizate vor reveni la starea inițială.')) {
-      success('Datele demo au fost resetate la starea inițială.')
+  const handleDeleteAccount = async () => {
+    setLoadingDelete(true)
+    try {
+      await api.delete('/auth/me')
+      logout()
+      navigate('/login')
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Eroare la ștergerea contului.')
+    } finally {
+      setLoadingDelete(false)
     }
+  }
+
+  const handleResetData = () => {
+    success('Datele demo au fost resetate la starea inițială.')
+    setResetPending(false)
   }
 
   return (
@@ -278,30 +295,66 @@ export default function Setari() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between bg-white border border-[#fcdede] p-4 rounded-xl">
-                <div className="max-w-[75%]">
+                <div className="max-w-[60%]">
                   <h4 className="text-[12.5px] font-semibold text-[#0d2b32]">Resetează datele demo</h4>
                   <p className="text-[11px] text-[#6b9aa5]">Șterge toate tranzacțiile noi înregistrate, editările din inventar și readuce baza de date la starea inițială de seed.</p>
                 </div>
-                <button 
-                  onClick={handleResetData}
-                  className="px-3 py-2 border border-[#f7c1c1] text-[#a32d2d] hover:bg-[#fffafa] text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5"
-                >
-                  <RefreshCw size={13} />
-                  Resetează datele
-                </button>
+                {!resetPending ? (
+                  <button
+                    onClick={() => setResetPending(true)}
+                    className="px-3 py-2 border border-[#f7c1c1] text-[#a32d2d] hover:bg-[#fffafa] text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5"
+                  >
+                    <RefreshCw size={13} />
+                    Resetează datele
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11.5px] font-semibold text-[#a32d2d]">Ești sigur?</span>
+                    <button
+                      onClick={handleResetData}
+                      className="px-3 py-1.5 bg-[#a32d2d] hover:bg-[#b83232] text-white text-xs font-semibold rounded-xl transition-all"
+                    >
+                      Da, resetează
+                    </button>
+                    <button
+                      onClick={() => setResetPending(false)}
+                      className="px-3 py-1.5 border border-[#d8edf0] text-[#6b9aa5] hover:bg-[#f5fcfc] text-xs font-semibold rounded-xl transition-all"
+                    >
+                      Anulează
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center justify-between bg-white border border-[#fcdede] p-4 rounded-xl">
+              <div className="bg-white border border-[#fcdede] p-4 rounded-xl space-y-3">
                 <div>
-                  <h4 className="text-[12.5px] font-semibold text-[#0d2b32]">Deconectare completă</h4>
-                  <p className="text-[11px] text-[#6b9aa5]">Încheie sesiunea curentă în siguranță și șterge token-urile de acces de pe acest dispozitiv.</p>
+                  <h4 className="text-[12.5px] font-semibold text-[#a32d2d]">Ștergere cont</h4>
+                  <p className="text-[11px] text-[#6b9aa5]">
+                    Această acțiune este permanentă și ireversibilă. Contul tău va fi șters definitiv din sistem.
+                  </p>
                 </div>
-                <button 
-                  className="px-3 py-2 text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 bg-[#a32d2d] hover:bg-[#b83232]"
-                >
-                  <LogOut size={13} />
-                  Deconectare
-                </button>
+                <div>
+                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">
+                    Scrie <span className="text-[#a32d2d] font-bold">{user ? `${user.firstName} ${user.lastName}` : '—'}</span> pentru a confirma
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirm}
+                    onChange={e => setDeleteConfirm(e.target.value)}
+                    placeholder="Numele tău complet..."
+                    className="w-full px-3 py-2 text-sm border border-[#fcdede] rounded-xl outline-none focus:border-[#a32d2d] text-[#0d2b32]"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={loadingDelete || deleteConfirm !== `${user?.firstName} ${user?.lastName}`}
+                    className="px-3 py-2 text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 bg-[#a32d2d] hover:bg-[#b83232] disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={13} />
+                    {loadingDelete ? 'Se șterge...' : 'Șterge contul'}
+                  </button>
+                </div>
               </div>
             </div>
           </section>
