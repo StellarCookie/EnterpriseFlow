@@ -11,12 +11,19 @@ const {
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User'); // Modelul tău de utilizator
+const rateLimit = require('express-rate-limit');
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { success: false, message: 'Prea multe încercări. Încearcă din nou în 15 minute.' }
+});
 
 // ==========================================
 // RUTE PUBLICE
 // ==========================================
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', authLimiter, register);
+router.post('/login', authLimiter, login);
 
 // ==========================================
 // RUTE PROTEJATE (Necesită doar să fii logat)
@@ -71,6 +78,15 @@ router.patch('/users/:id/toggle-active', protect, restrictTo('Manager'), toggleU
 
 router.delete('/me', protect, async (req, res) => {
   try {
+    if (req.user.role === 'Manager') {
+      const managerCount = await User.countDocuments({ role: 'Manager', isActive: true });
+      if (managerCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nu poți șterge singurul cont de Manager activ.',
+        });
+      }
+    }
     await User.findByIdAndDelete(req.user._id);
     res.status(200).json({ success: true, message: 'Contul a fost șters.' });
   } catch (error) {

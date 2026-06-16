@@ -109,14 +109,20 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    managerNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );
 
-transactionSchema.pre('save', async function (next) {
+transactionSchema.pre('save', function (next) {
   if (!this.reference) {
-    const count = await mongoose.model('Transaction').countDocuments();
-    this.reference = `TXN-${String(count + 1).padStart(4, '0')}`;
+    const ts = Date.now().toString(36).toUpperCase();
+    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+    this.reference = `TXN-${ts}-${rand}`;
   }
   next();
 });

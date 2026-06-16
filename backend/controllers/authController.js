@@ -24,7 +24,7 @@ const sendTokenResponse = (user, statusCode, res) => {
 
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password } = req.body;
 
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
@@ -46,10 +46,10 @@ exports.register = async (req, res) => {
       lastName,
       email,
       password,
-      role: role || 'Angajat',
+      role: 'Angajat',
     });
 
-    await logAuthEvent(user, 'LOGIN', req);
+    await logAuthEvent(user, 'REGISTER', req);
 
     sendTokenResponse(user, 201, res);
   } catch (error) {

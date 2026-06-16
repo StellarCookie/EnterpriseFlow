@@ -83,7 +83,7 @@ exports.getTransactions = async (req, res) => {
     if (status) filter.status = status;
     if (type) filter.type = type;
     if (category) filter.category = category;
-    console.log('FILTER:', JSON.stringify(filter), 'USER:', req.user.role, req.user._id); 
+    
 
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -140,6 +140,7 @@ exports.getTransaction = async (req, res) => {
 // AUTOMATIZARE CRITICĂ: aprobarea declanșează actualizarea soldului ȘI a stocului
 exports.approveTransaction = async (req, res) => {
   try {
+    const { managerNote } = req.body;
     const transaction = await Transaction.findById(req.params.id).populate('stockItem');
 
     if (!transaction) {
@@ -168,7 +169,18 @@ exports.approveTransaction = async (req, res) => {
           stock.quantity = stock.quantity + transaction.stockQuantityDelta;
         } else {
           // Venit = vindem marfă = stocul SCADE
-          stock.quantity = Math.max(0, stock.quantity - transaction.stockQuantityDelta);
+          // FIXED
+if (transaction.type === 'Venit') {
+  if (stock.quantity < transaction.stockQuantityDelta) {
+    return res.status(400).json({
+      success: false,
+      message: `Stoc insuficient. Disponibil: ${stock.quantity}, necesar: ${transaction.stockQuantityDelta}.`,
+    });
+  }
+  stock.quantity -= transaction.stockQuantityDelta;
+} else {
+  stock.quantity += transaction.stockQuantityDelta;
+}
         }
         await stock.save();
       }
@@ -178,6 +190,7 @@ exports.approveTransaction = async (req, res) => {
     transaction.status = 'Aprobat';
     transaction.approvedBy = req.user._id;
     transaction.approvedAt = new Date();
+    if (managerNote !== undefined) transaction.managerNote = managerNote;
     await transaction.save();
 
     await transaction.populate('createdBy', 'firstName lastName');
@@ -195,7 +208,7 @@ exports.approveTransaction = async (req, res) => {
 // PATCH /api/transactions/:id/reject — DOAR Manager
 exports.rejectTransaction = async (req, res) => {
   try {
-    const { reason } = req.body;
+    const { reason, managerNote } = req.body;
 
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) {
@@ -213,7 +226,9 @@ exports.rejectTransaction = async (req, res) => {
     transaction.status = 'Respins';
     transaction.approvedBy = req.user._id;
     transaction.approvedAt = new Date();
-    transaction.rejectionReason = reason || '';
+    const note = managerNote || reason || '';
+    transaction.rejectionReason = note;
+    transaction.managerNote = note;
     await transaction.save();
 
     await transaction.populate('createdBy', 'firstName lastName');
@@ -254,6 +269,16 @@ exports.updateTransaction = async (req, res) => {
     const net = parseFloat(txn.netAmount) || 0;
     const tva = parseFloat(txn.tva) || 0;
     txn.totalAmount = +(net + net * tva / 100).toFixed(2);
+
+    if (txn.category === 'Stoc produse' && txn.stockItem) {
+  const stockExists = await Stock.findById(txn.stockItem);
+  if (!stockExists) {
+    return res.status(404).json({
+      success: false,
+      message: 'Produsul selectat nu mai există în nomenclator.',
+    });
+  }
+}
 
     await txn.save();
     await txn.populate('createdBy', 'firstName lastName');

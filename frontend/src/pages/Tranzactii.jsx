@@ -67,8 +67,8 @@ export default function Tranzactii() {
   const [showForm, setShowForm] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
-  const [rejectNote, setRejectNote] = useState('')
-  const [showRejectInput, setShowRejectInput] = useState(false)
+  const [managerNote, setManagerNote] = useState('')
+  const [showNoteInput, setShowNoteInput] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [loadingScan, setLoadingScan] = useState(false) // Stare nouă pentru procesul de scanare OCR
   const [form, setForm] = useState(resetForm)
@@ -175,8 +175,10 @@ export default function Tranzactii() {
     if (!selected) return
     setActionLoading(true)
     try {
-      const updated = await approve(selected._id)
+      const updated = await approve(selected._id, managerNote)
       setSelected(updated)
+      setManagerNote('')
+      setShowNoteInput(false)
       success('Tranzacție aprobată. Stocul a fost actualizat automat.')
     } catch (err) {
       toastError(err.response?.data?.message || 'Eroare la aprobare.')
@@ -189,10 +191,10 @@ export default function Tranzactii() {
     if (!selected) return
     setActionLoading(true)
     try {
-      const updated = await reject(selected._id, rejectNote)
+      const updated = await reject(selected._id, managerNote)
       setSelected(updated)
-      setShowRejectInput(false)
-      setRejectNote('')
+      setShowNoteInput(false)
+      setManagerNote('')
       success('Tranzacție respinsă.')
     } catch (err) {
       toastError(err.response?.data?.message || 'Eroare la respingere.')
@@ -327,7 +329,7 @@ export default function Tranzactii() {
               const isIn = txn.type === 'Venit'
               const isSel = selected?._id === txn._id
               return (
-                <div key={txn._id} onClick={() => { setSelected(txn); setDeletePending(false) }}
+                <div key={txn._id} onClick={() => { setSelected(txn); setDeletePending(false); setManagerNote(''); setShowNoteInput(false) }}
                   className="bg-white border rounded-xl p-3.5 cursor-pointer transition-all relative overflow-hidden"
                   style={{ borderColor: isSel ? '#00c9b1' : '#d8edf0', boxShadow: isSel ? '0 0 0 3px rgba(0,201,177,.1)' : '' }}>
                   {isSel && <div className="absolute top-0 left-0 bottom-0 w-[3px] rounded-r-full" style={{ background: 'linear-gradient(180deg,#00c9b1,#0096a0)' }} />}
@@ -380,6 +382,16 @@ export default function Tranzactii() {
                   </div>
                 )}
 
+                {selected.managerNote && (
+                  <div className="flex gap-3 p-3.5 rounded-xl mb-4 text-[12.5px]" style={{ background: '#fdf6e3', border: '1px solid #f5c775', color: '#854f0b' }}>
+                    <MessageSquare size={15} className="flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: '#a07020' }}>Notă manager</p>
+                      <p>{selected.managerNote}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <p className="text-[9.5px] font-semibold text-[#8ab0b8] uppercase tracking-widest mb-3">Flux de aprobare</p>
@@ -424,17 +436,18 @@ export default function Tranzactii() {
               {/* Actions - MANAGER ONLY, PENDING ONLY */}
               {isManager && selected.status === 'În așteptare' && (
                 <div className="px-5 pb-5 border-t border-[#edf5f7] pt-4 flex-shrink-0">
-                  {showRejectInput && (
-                    <input value={rejectNote} onChange={e => setRejectNote(e.target.value)}
-                      placeholder="Motiv respingere (opțional)..."
-                      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl mb-3 outline-none focus:border-[#00c9b1] text-[#0d2b32]" />
+                  {showNoteInput && (
+                    <textarea value={managerNote} onChange={e => setManagerNote(e.target.value)}
+                      rows={2}
+                      placeholder="Notă pentru angajat (va fi vizibilă indiferent de decizie)..."
+                      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl mb-3 outline-none focus:border-[#00c9b1] text-[#0d2b32] resize-none" />
                   )}
                   <div className="flex gap-3">
-                    <button onClick={() => setShowRejectInput(v => !v)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5]">
+                    <button onClick={() => setShowNoteInput(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium border transition-colors ${showNoteInput ? 'bg-[#edf9f7] border-[#9fe1cb] text-[#0f6e56]' : 'bg-white border-[#d8edf0] text-[#6b9aa5]'}`}>
                       <MessageSquare size={13} /> Notă
                     </button>
-                    <button onClick={showRejectInput ? handleReject : () => setShowRejectInput(true)} disabled={actionLoading}
+                    <button onClick={handleReject} disabled={actionLoading}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-[#fcebeb] border border-[#f7c1c1] text-[#a32d2d] disabled:opacity-60">
                       <X size={13} /> Respinge
                     </button>

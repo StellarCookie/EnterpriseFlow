@@ -27,16 +27,16 @@ export function useTransactions(statusFilter = 'Toate') {
 
   useEffect(() => { fetch() }, [fetch])
 
-  const approve = useCallback(async (id) => {
-    const res = await api.patch(`/transactions/${id}/approve`)
+  const approve = useCallback(async (id, managerNote = '') => {
+    const res = await api.patch(`/transactions/${id}/approve`, { managerNote })
     setTransactions(prev =>
       prev.map(t => t._id === id ? { ...t, ...res.data.data } : t)
     )
     return res.data.data
   }, [])
 
-  const reject = useCallback(async (id, reason = '') => {
-    const res = await api.patch(`/transactions/${id}/reject`, { reason })
+  const reject = useCallback(async (id, managerNote = '') => {
+    const res = await api.patch(`/transactions/${id}/reject`, { managerNote })
     setTransactions(prev =>
       prev.map(t => t._id === id ? { ...t, ...res.data.data } : t)
     )
