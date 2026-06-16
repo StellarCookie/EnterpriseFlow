@@ -76,15 +76,17 @@ const LogRow = ({ log }) => {
     }
 
     if (log.entity === 'Order') {
-      // _txData is live data fetched from the Transaction collection (works for all entries)
       const tx     = log._txData;
       const after  = log.changes?.after?.data || log.changes?.after;
       const before = log.changes?.before;
-      const docNr     = tx?.documentNumber || after?.documentNumber || before?.documentNumber || null;
-      const docStatus = tx?.status || after?.status || before?.status || null;
-      // entityName may be old verbose format "Aprobare — Cheltuială..." or new short "Aprobare"
-      const label = (log.entityName || '').split(/\s*—/)[0].trim()
-                 || (log.action === 'CREATE' ? 'Document nou' : '');
+      const docNr  = tx?.documentNumber || after?.documentNumber || before?.documentNumber || null;
+
+      // For manager approve/reject keep the stored label; for all other actions use the transaction type
+      const storedLabel = (log.entityName || '').split(/\s*—/)[0].trim();
+      const isManagerAction = storedLabel === 'Aprobare' || storedLabel === 'Respingere';
+      const label = isManagerAction
+        ? storedLabel
+        : (tx?.type || after?.type || before?.type || storedLabel || (log.action === 'CREATE' ? 'Document nou' : ''));
 
       return (
         <div className="flex items-center gap-2 flex-wrap">

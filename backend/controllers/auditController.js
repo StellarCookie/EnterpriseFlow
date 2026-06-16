@@ -52,7 +52,7 @@ const getLogs = async (req, res) => {
       const knownIds = [...new Set(Object.values(logIdMap))];
       if (knownIds.length > 0) {
         const txs = await Transaction.find({ _id: { $in: knownIds } })
-          .select('documentNumber status')
+          .select('documentNumber status type')
           .lean();
         txs.forEach(t => { txMap[t._id.toString()] = t; });
       }
@@ -69,7 +69,7 @@ const getLogs = async (req, res) => {
             return Transaction.findOne({
               createdBy: l.userId,
               createdAt: { $gte: new Date(t0 - 5000), $lte: new Date(t0 + 5000) },
-            }).select('documentNumber status _id').lean();
+            }).select('documentNumber status type _id').lean();
           })
         );
         orphans.forEach((l, i) => {
@@ -85,7 +85,7 @@ const getLogs = async (req, res) => {
         if (l.entity !== 'Order') return l;
         const txId = logIdMap[l._id.toString()];
         const tx   = txId && txMap[txId];
-        if (tx) l._txData = { documentNumber: tx.documentNumber, status: tx.status };
+        if (tx) l._txData = { documentNumber: tx.documentNumber, status: tx.status, type: tx.type };
         return l;
       });
     }

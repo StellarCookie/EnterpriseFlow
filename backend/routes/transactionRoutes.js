@@ -62,7 +62,7 @@ router.get('/', getTransactions);
 router.get('/:id', getTransaction);
 
 router.post('/',
-  auditLog('CREATE', 'Order', () => 'Document nou'),
+  auditLog('CREATE', 'Order', (req, data) => data?.data?.type || 'Document nou'),
   createTransaction
 );
 
@@ -79,12 +79,12 @@ router.patch('/:id/reject',
 );
 
 router.patch('/:id',
-  auditLog('UPDATE', 'Order', (req, data) => data?.data?.supplier || 'Editare document'),
+  auditLog('UPDATE', 'Order', (req, data) => data?.data?.type || 'Editare document'),
   updateTransaction
 );
 
 router.delete('/:id',
-  auditLog('DELETE', 'Order', (req) => req._auditOriginalDoc?.supplier || 'Ștergere document'),
+  auditLog('DELETE', 'Order', (req) => req._auditOriginalDoc?.type || 'Ștergere document'),
   deleteTransaction
 );
 

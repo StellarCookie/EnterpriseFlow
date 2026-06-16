@@ -276,7 +276,7 @@ exports.deleteTransaction = async (req, res) => {
     if (txn.status === 'Aprobat')
       return res.status(400).json({ success: false, message: 'Nu poți șterge o tranzacție aprobată.' });
 
-    req._auditOriginalDoc = { supplier: txn.supplier, documentNumber: txn.documentNumber };
+    req._auditOriginalDoc = { supplier: txn.supplier, documentNumber: txn.documentNumber, type: txn.type };
     await Transaction.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Tranzacție ștearsă.' });
   } catch (error) {
