@@ -17,19 +17,19 @@ router.get('/:id', getStock);
 
 router.post('/',
   restrictTo('Angajat'),
-  auditLog('CREATE', 'Stock', (req, data) => data.name || data.productName || 'Stoc nou'),  // ← NOU
+  auditLog('CREATE', 'Stock', (req, data) => data?.data?.name || 'Stoc nou'),
   createStock
 );
 
 router.patch('/:id',
   restrictTo('Angajat'),
-  auditLog('UPDATE', 'Stock', (req, data) => data.name || data.productName || `ID: ${req.params.id}`),  // ← NOU
+  auditLog('UPDATE', 'Stock', (req, data) => data?.data?.name || req._auditOriginalDoc?.name || `ID: ${req.params.id}`),
   updateStock
 );
 
 router.delete('/:id',
   restrictTo('Angajat'),
-  auditLog('DELETE', 'Stock', (req) => `ID: ${req.params.id}`),  // ← NOU
+  auditLog('DELETE', 'Stock', (req) => req._auditOriginalDoc?.name || `ID: ${req.params.id}`),
   deleteStock
 );
 

@@ -3,10 +3,12 @@ const AuditLog = require('../models/AuditLog');
 
 const auditLog = (action, entity, getEntityName) => {
   return async (req, res, next) => {
-    // Dacă este UPDATE, salvăm starea documentului de dinainte de modificare
-    if (action === 'UPDATE' && req.params?.id) {
+    // Dacă este UPDATE sau DELETE, salvăm starea documentului de dinainte de modificare
+    if ((action === 'UPDATE' || action === 'DELETE') && req.params?.id) {
       try {
-        const Model = mongoose.model(entity);
+        const MODEL_NAME_MAP = { Order: 'Transaction' };
+        const modelName = MODEL_NAME_MAP[entity] || entity;
+        const Model = mongoose.model(modelName);
         req._auditOriginalDoc = await Model.findById(req.params.id).lean();
       } catch (_) {}
     }
@@ -17,9 +19,16 @@ const auditLog = (action, entity, getEntityName) => {
       if (res.statusCode < 400 && req.user) {
         try {
           // Funcție internă de curățare a câmpurilor tehnice/secrete
+          const unwrap = (obj) => {
+            if (!obj) return obj;
+            // Unwrap API response wrappers like { success: true, data: ... }
+            return (typeof obj.success !== 'undefined' && obj.data) ? obj.data : obj;
+          };
+
           const clean = (obj) => {
             if (!obj) return obj;
-            const c = obj.toObject ? obj.toObject() : { ...obj };
+            const raw = unwrap(obj);
+            const c = raw.toObject ? raw.toObject() : { ...raw };
             ['password', '__v', 'createdAt', 'updatedAt'].forEach(f => delete c[f]);
             return c;
           };
@@ -30,16 +39,16 @@ const auditLog = (action, entity, getEntityName) => {
             userRole:   req.user.role,
             action,
             entity,
-            entityId:   data?._id || req.params?.id || null,
+            entityId:   data?._id || data?.data?._id || req.params?.id || null,
             entityName: getEntityName ? getEntityName(req, data) : (data?.name || data?.reference || null),
             ip:         req.ip || req.headers['x-forwarded-for'],
             userAgent:  req.headers['user-agent']
           };
 
           // CORECTURĂ 1: Gestionare modificări pentru acțiunea UPDATE
-          if (action === 'UPDATE' && req._auditOriginalDoc) {
+          if (action === 'UPDATE') {
             logEntry.changes = {
-              before: clean(req._auditOriginalDoc),
+              before: req._auditOriginalDoc ? clean(req._auditOriginalDoc) : null,
               after:  clean(data)
             };
           } 

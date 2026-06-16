@@ -3,7 +3,7 @@ const Stock = require('../models/Stock');
 // GET /api/stocks — ambele roluri văd lista
 exports.getStocks = async (req, res) => {
   try {
-    const stocks = await Stock.find().sort({ name: 1 });
+    const stocks = await Stock.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: stocks });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

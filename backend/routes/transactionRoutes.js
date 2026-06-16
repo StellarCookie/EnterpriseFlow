@@ -60,29 +60,19 @@ router.get('/', getTransactions);
 router.get('/:id', getTransaction);
 
 router.post('/',
-  auditLog('CREATE', 'Order', (req, data) => {
-    const t = data.data;
-    // ex: "Cheltuială — Stoc produse — 1.200 RON"
-    return `${t?.type || 'Tranzacție'} — ${t?.category || t?.supplier || 'nouă'} — ${t?.totalAmount ? t.totalAmount + ' RON' : ''}`.trim();
-  }),
+  auditLog('CREATE', 'Order', () => 'Document nou'),
   createTransaction
 );
 
 router.patch('/:id/approve',
   restrictTo('Manager'),
-  auditLog('UPDATE', 'Order', (req, data) => {
-    const t = data.data;
-    return `Aprobare — ${t?.type || ''} ${t?.category || t?.supplier || ''} — ${t?.totalAmount ? t.totalAmount + ' RON' : ''}`.trim();
-  }),
+  auditLog('UPDATE', 'Order', () => 'Aprobare'),
   approveTransaction
 );
 
 router.patch('/:id/reject',
   restrictTo('Manager'),
-  auditLog('UPDATE', 'Order', (req, data) => {
-    const t = data.data;
-    return `Respingere — ${t?.type || ''} ${t?.category || t?.supplier || ''} — ${t?.totalAmount ? t.totalAmount + ' RON' : ''}`.trim();
-  }),
+  auditLog('UPDATE', 'Order', () => 'Respingere'),
   rejectTransaction
 );
 

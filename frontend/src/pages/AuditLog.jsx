@@ -76,34 +76,50 @@ const LogRow = ({ log }) => {
     }
 
     if (log.entity === 'Order') {
-      // Preluăm numărul de identificare (reference) din modificări sau din fallback-ul entityName
-      const docNr = log.changes?.after?.reference || log.changes?.before?.reference || log.entityName;
-      // Preluăm statusul documentului (Aprobat/Respins/În așteptare)
-      const docStatus = log.changes?.after?.status || log.changes?.before?.status;
+      // _txData is live data fetched from the Transaction collection (works for all entries)
+      const tx     = log._txData;
+      const after  = log.changes?.after?.data || log.changes?.after;
+      const before = log.changes?.before;
+      const docNr     = tx?.documentNumber || after?.documentNumber || before?.documentNumber || null;
+      const docStatus = tx?.status || after?.status || before?.status || null;
+      // entityName may be old verbose format "Aprobare — Cheltuială..." or new short "Aprobare"
+      const label = (log.entityName || '').split(/\s*—/)[0].trim()
+                 || (log.action === 'CREATE' ? 'Document nou' : '');
 
-      // Afișarea pentru toți utilizatorii: se vede numărul documentului și statusul
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-[#0d2b32] bg-[#f0f8fa] px-2 py-0.5 rounded-md border border-[#d8edf0]">
-            {docNr}
+          <span className="text-[12px] font-medium text-[#0d2b32]">
+            {label}{docNr ? ` - ${docNr}` : ''}
           </span>
-          {docStatus && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              docStatus === 'Aprobat' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-              docStatus === 'Respins' ? 'bg-red-50 text-red-700 border border-red-200' :
-              'bg-amber-50 text-amber-700 border border-amber-200'
-            }`}>
-              {docStatus}
-            </span>
-          )}
         </div>
       );
     }
 
     if (log.entity === 'Stock') {
-      // 4. La stoc se preia DOAR numele său (curat, eliminând eventuale ID-uri)
-      const numeStoc = log.changes?.after?.name || log.changes?.before?.name || log.entityName;
-      return <span className="text-[#0d2b32] font-medium">{numeStoc}</span>;
+      // after may be nested { success, data } (old entries) or flat (new entries)
+      const after  = log.changes?.after?.data || log.changes?.after;
+      const before = log.changes?.before;
+      // _stockFallback is populated by the backend for old CREATE entries with no changes stored
+      const fb = log._stockFallback;
+
+      const name = after?.name || before?.name || fb?.name || log.entityName;
+      // quantity reflects the state AT THE TIME of the action:
+      // DELETE → what it was before; CREATE/UPDATE → what it became after
+      const qty  = log.action === 'DELETE'
+        ? (before?.quantity ?? null)
+        : (after?.quantity  ?? null);
+      const unit = after?.unit || before?.unit || fb?.unit || 'buc.';
+
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-[#0d2b32] font-medium">{name}</span>
+          {qty !== null && (
+            <span className="text-[11px] bg-[#f0f8fa] text-[#6b9aa5] font-medium px-2 py-0.5 rounded-md border border-[#d8edf0]">
+              {qty} {unit}
+            </span>
+          )}
+        </div>
+      );
     }
 
     return log.entityName;
