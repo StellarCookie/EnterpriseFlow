@@ -240,6 +240,7 @@ exports.updateTransaction = async (req, res) => {
     const allowed = ['type', 'documentType', 'documentNumber', 'supplier', 'cui', 'category',
       'netAmount', 'tva', 'totalAmount', 'dueDate', 'paymentMethod', 'notes',
       'stockItem', 'stockQuantityDelta', 'bankAccount', 'issueDate', 'paymentStatus'];
+    if (req.body.stockItem === '') req.body.stockItem = null;
     allowed.forEach(f => { if (req.body[f] !== undefined) txn[f] = req.body[f]; });
 
     // Re-submit for approval if it was previously rejected
