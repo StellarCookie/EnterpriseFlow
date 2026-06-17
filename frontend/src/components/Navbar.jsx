@@ -64,10 +64,10 @@ export default function Navbar({ title, subtitle, pendingCount = 0, onDownload, 
   return (
     <header className="flex items-center justify-between px-7 py-5 flex-shrink-0">
       <div>
-        <h1 className="text-xl font-semibold text-navy tracking-tight" style={{ fontFamily: 'Georgia, serif' }}>
+        <h1 className="text-2xl font-semibold text-ink tracking-tight font-serif">
           {title}
         </h1>
-        <p className="text-xs text-slate-400 mt-0.5 font-light">
+        <p className="text-xs text-blueviolet/70 mt-0.5 font-medium">
           {subtitle || todayCapitalized}
         </p>
       </div>
@@ -75,23 +75,61 @@ export default function Navbar({ title, subtitle, pendingCount = 0, onDownload, 
       <div className="flex items-center gap-3">
         {showSearch && (
         <div className="relative">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
-            <Search size={13} className="text-slate-400" />
+          <div className="flex items-center gap-2 bg-white/50 backdrop-blur-xl border border-lavender/30 rounded-xl px-3 py-2 shadow-lg shadow-lavender/10 focus-within:border-periwinkle/70 focus-within:bg-white/70 transition-all duration-200">
+            <Search size={13} className="text-blueviolet/70" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              placeholder="CautÄ tranzacČ›ii, produse..."
-              className="text-sm text-slate-600 bg-transparent outline-none w-44 placeholder-slate-400"
+              placeholder="Caută tranzacții, produse..."
+              className="text-sm text-ink bg-transparent outline-none w-44 placeholder-lavender/60"
             />
           </div>
 
           {showDropdown && (
-            <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50">
+            <div className="absolute right-0 mt-2 w-72 bg-white/70 backdrop-blur-xl border border-lavender/30 rounded-2xl shadow-xl shadow-lavender/20 overflow-hidden z-50">
               {!hasResults && (
-                <p className="px-4 py-3 text-xs text-slate-400">Niciun rezultat pentru â€ž{query}â€ť</p>
+                <p className="px-4 py-3 text-xs text-blueviolet/70">Niciun rezultat pentru „{query}”</p>
               )}
+
+              {matchedTxns.length > 0 && (
+                <div className="py-1.5">
+                  <p className="px-4 pb-1 text-[10px] font-semibold text-blueviolet/60 uppercase tracking-wider">Tranzacții</p>
+                  {matchedTxns.map(txn => (
+                    <button key={txn._id} onClick={() => goToTransaction(txn)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-lavender/15 transition-colors">
+                      <Receipt size={13} className="text-blueviolet/70 flex-shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-xs font-medium text-ink truncate">{txn.supplier}</span>
+                        <span className="block text-[10px] text-blueviolet/60 font-mono">{txn.reference}</span>
+                      </span>
+                      <span className="text-xs font-semibold text-periwinkle flex-shrink-0">{formatRON(txn.totalAmount)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {matchedStocks.length > 0 && (
+                <div className="py-1.5 border-t border-lavender/20">
+                  <p className="px-4 pb-1 text-[10px] font-semibold text-blueviolet/60 uppercase tracking-wider">Produse</p>
+                  {matchedStocks.map(stock => (
+                    <button key={stock._id} onClick={() => goToStock(stock)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-lavender/15 transition-colors">
+                      <Package size={13} className="text-blueviolet/70 flex-shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-xs font-medium text-ink truncate">{stock.name}</span>
+                        <span className="block text-[10px] text-blueviolet/60 font-mono">{stock.sku || '—'}</span>
+                      </span>
+                      <span className="text-xs font-semibold text-periwinkle flex-shrink-0">{stock.quantity} {stock.unit}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        )}
 
               {matchedTxns.length > 0 && (
                 <div className="py-1.5">
@@ -127,13 +165,12 @@ export default function Navbar({ title, subtitle, pendingCount = 0, onDownload, 
                 </div>
               )}
             </div>
-          )}
-        </div>
-        )}
+        
+        
 
         <NotificationsPanel transactions={transactions} isManager={isManager} />
 
-      </div>
+    
     </header>
   )
 }

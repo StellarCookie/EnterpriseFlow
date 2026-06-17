@@ -2,31 +2,31 @@ import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
 
 const STYLES = {
   success: {
-    bg: 'bg-emerald-50 border-emerald-200',
+    bg: 'bg-emerald-50/70 border-emerald-300/50',
     text: 'text-emerald-800',
     icon: <CheckCircle size={16} className="text-emerald-600 flex-shrink-0" />,
   },
   error: {
-    bg: 'bg-red-50 border-red-200',
-    text: 'text-red-800',
-    icon: <XCircle size={16} className="text-red-600 flex-shrink-0" />,
+    bg: 'bg-rose-50/70 border-rose-300/50',
+    text: 'text-rose-700',
+    icon: <XCircle size={16} className="text-rose-600 flex-shrink-0" />,
   },
   warning: {
-    bg: 'bg-amber-50 border-amber-200',
+    bg: 'bg-amber-50/70 border-amber-300/50',
     text: 'text-amber-800',
     icon: <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />,
   },
   info: {
-    bg: 'bg-sky-50 border-sky-200',
-    text: 'text-sky-800',
-    icon: <Info size={16} className="text-sky-600 flex-shrink-0" />,
+    bg: 'bg-white/60 border-lavender/40',
+    text: 'text-ink',
+    icon: <Info size={16} className="text-periwinkle flex-shrink-0" />,
   },
 }
 
 export function Toast({ toast, onRemove }) {
   const s = STYLES[toast.type] || STYLES.info
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-lg ${s.bg} ${s.text} max-w-sm animate-fade-in`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-xl text-sm font-medium shadow-lg shadow-lavender/20 ${s.bg} ${s.text} max-w-sm animate-fade-in`}>
       {s.icon}
       <span className="flex-1">{toast.message}</span>
       <button onClick={() => onRemove(toast.id)} className="opacity-50 hover:opacity-80 transition-opacity ml-1">

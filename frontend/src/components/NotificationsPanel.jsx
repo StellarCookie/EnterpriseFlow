@@ -11,13 +11,13 @@ const formatDate = (d) =>
 /* Section accent colors come from the app's palette, matching the
    accents used in the sidebar (sapphire / ballet slipper). */
 const SECTION_COLORS = {
-  approvals: '#72B0AB',
-  overdue: '#FE9179',
+  approvals: '#5b4ad1',
+  overdue: '#d6568f',
 }
 
 function Section({ title, icon: Icon, color, children }) {
   return (
-    <div className="py-1.5 border-b border-slate-100 last:border-b-0">
+    <div className="py-1.5 border-b border-lavender/20 last:border-b-0">
       <p
         className="px-4 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5"
         style={{ color }}
@@ -34,13 +34,13 @@ function Item({ onClick, title, subtitle, value, valueColor }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-slate-50 transition-colors"
+      className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-lavender/15 transition-colors"
     >
       <span className="flex-1 min-w-0">
-        <span className="block text-xs font-medium text-slate-700 truncate">{title}</span>
-        <span className="block text-[10px] text-slate-400">{subtitle}</span>
+        <span className="block text-xs font-medium text-ink truncate">{title}</span>
+        <span className="block text-[10px] text-blueviolet/60">{subtitle}</span>
       </span>
-      <span className="text-xs font-semibold flex-shrink-0" style={{ color: valueColor || '#5a7a85' }}>
+      <span className="text-xs font-semibold flex-shrink-0" style={{ color: valueColor || '#5b4ad1' }}>
         {value}
       </span>
     </button>
@@ -51,7 +51,7 @@ function More({ count, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full px-4 py-2 text-left text-[11px] font-semibold text-[#72B0AB] hover:bg-slate-50 transition-colors"
+      className="w-full px-4 py-2 text-left text-[11px] font-semibold text-periwinkle hover:bg-lavender/15 transition-colors"
     >
       + încă {count} {count === 1 ? 'rezultat' : 'rezultate'}
     </button>
@@ -93,27 +93,27 @@ export default function NotificationsPanel({ transactions = [], isManager = fals
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-sm hover:bg-slate-50 transition-colors relative"
+        className="w-9 h-9 bg-white/50 backdrop-blur-xl border border-lavender/30 rounded-xl flex items-center justify-center shadow-lg shadow-lavender/10 hover:bg-white/70 hover:scale-105 transition-all duration-200 relative"
       >
-        <Bell size={15} className="text-slate-500" />
+        <Bell size={15} className="text-blueviolet" />
         {total > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[#FE9179] text-white text-[10px] font-bold border-2 border-white">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-pastelpink text-white text-[10px] font-bold border-2 border-canvas">
             {total > 9 ? '9+' : total}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50 max-h-[28rem] overflow-y-auto">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white">
-            <p className="text-sm font-semibold text-[#0d2b32]">Notificări</p>
-            {total > 0 && <span className="text-[11px] text-slate-400">{total} active</span>}
+        <div className="absolute right-0 mt-2 w-80 bg-white/70 backdrop-blur-xl border border-lavender/30 rounded-2xl shadow-xl shadow-lavender/20 overflow-hidden z-50 max-h-[28rem] overflow-y-auto">
+          <div className="px-4 py-3 border-b border-lavender/20 flex items-center justify-between sticky top-0 bg-white/70 backdrop-blur-xl">
+            <p className="text-sm font-semibold text-ink">Notificări</p>
+            {total > 0 && <span className="text-[11px] text-blueviolet/60">{total} active</span>}
           </div>
 
           {total === 0 ? (
             <div className="px-4 py-8 text-center">
-              <CheckCircle2 size={22} className="text-[#72B0AB] mx-auto mb-2" />
-              <p className="text-xs text-slate-400">Totul e la zi. Nicio notificare nouă.</p>
+              <CheckCircle2 size={22} className="text-periwinkle mx-auto mb-2" />
+              <p className="text-xs text-blueviolet/70">Totul e la zi. Nicio notificare nouă.</p>
             </div>
           ) : (
             <>

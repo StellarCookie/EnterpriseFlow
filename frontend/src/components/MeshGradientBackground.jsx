@@ -6,15 +6,15 @@ import React from "react";
 /*  Change these hex values to swap the whole look in one place.       */
 /* ------------------------------------------------------------------ */
 const COLORS = {
-  sapphire: "#72B0AB",
-  arctic: "#BCDDDC",
-  lace: "#FFEDD1",
-  bubblegum: "#FDC1B4",
-  balletSlipper: "#FE9179",
-  sage: "#CFB97E",
-  pistachio: "#B89D47",
-  spruce: "#355E58",
-  peacock: "#053229",
+  sapphire: "#5b4ad1",      // periwinkle
+  arctic: "#f3c9dc",        // light pink
+  lace: "#f7f1f8",          // canvas
+  bubblegum: "#f0a4c4",     // pastel pink
+  balletSlipper: "#b48bd0", // lavender
+  sage: "#6a63d4",          // blue-violet
+  pistachio: "#b48bd0",     // lavender
+  spruce: "#f3c9dc",        // light pink (base gradient top)
+  peacock: "#f7f1f8",       // canvas (base gradient bottom)
 };
 
 /* ------------------------------------------------------------------ */
@@ -147,13 +147,13 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
         inset: 0,
         zIndex: 0,
         overflow: "hidden",
-        background: `linear-gradient(135deg, ${COLORS.peacock} 0%, ${COLORS.spruce} 100%)`,
+        background: `linear-gradient(135deg, ${COLORS.lace} 0%, ${COLORS.arctic} 55%, rgba(180,139,208,0.25) 100%)`,
         cursor: "pointer",
         ...style,
       }}
     >
       <style>{`
-        @keyframes meshFadeIn { from { opacity: 0; } to { opacity: 0.75; } }
+        @keyframes meshFadeIn { from { opacity: 0; } to { opacity: 0.4; } }
         @keyframes meshRipple { 0% { transform: scale(0.15); opacity: 0.55; } 100% { transform: scale(1); opacity: 0; } }
         @keyframes meshRing { 0% { transform: scale(0); opacity: 0.7; } 100% { transform: scale(1); opacity: 0; } }
         @media (prefers-reduced-motion: reduce) {
@@ -176,9 +176,9 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
             marginTop: `-${b.size / 2}vmax`,
             borderRadius: "50%",
             background: b.color,
-            filter: "blur(60px)", // increase for a softer look, lower for sharper
-            mixBlendMode: "screen",
-            opacity: 0.75,
+            filter: "blur(70px)", // increase for a softer look, lower for sharper
+            mixBlendMode: "multiply",
+            opacity: 0.4,
             willChange: "transform",
             animation: "meshFadeIn 1.4s ease-out",
           }}

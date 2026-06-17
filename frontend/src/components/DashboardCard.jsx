@@ -5,52 +5,50 @@ export default function DashboardCard({
   color = 'teal-dark', icon: Icon,
   miniBar, tag, progress, progressLabel, bigNumber,
 }) {
-  const isDarkTeal = color === 'teal-dark'
-  const isDarkSlate = color === 'dark-slate'
-  const isDark = isDarkTeal || isDarkSlate
+  const isPrimary = color === 'teal-dark'
+  const isAccent = color === 'dark-slate'
+  const isDark = isPrimary || isAccent
 
-  const bgStyle = isDarkTeal
-    ? { background: '#0d4a52', border: '1px solid #0a3840' }
-    : isDarkSlate
-      ? { background: '#1a2e35', border: '1px solid #223a42' }
+  const bgStyle = isPrimary
+    ? { background: 'linear-gradient(135deg,#5b4ad1,#6a63d4)', border: '1px solid rgba(255,255,255,0.18)' }
+    : isAccent
+      ? { background: 'linear-gradient(135deg,#6a63d4,#b48bd0)', border: '1px solid rgba(255,255,255,0.18)' }
       : color === 'glass'
-        ? { background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(0,201,177,0.22)' }
-        : { background: '#fff', border: '1px solid #dceef2' }
+        ? { background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(180,139,208,0.3)', backdropFilter: 'blur(16px)' }
+        : { background: 'linear-gradient(135deg,rgba(255,255,255,0.6),rgba(243,201,220,0.45))', border: '1px solid rgba(180,139,208,0.3)', backdropFilter: 'blur(16px)' }
 
-  const labelColor = isDark ? 'rgba(255,255,255,0.45)' : '#6b9aa5'
-  const valueColor = isDark ? '#fff' : '#0d2b32'
+  const labelColor = isDark ? 'rgba(255,255,255,0.7)' : '#6a63d4'
+  const valueColor = isDark ? '#fff' : '#352a6e'
   const changeColor = changeType === 'up'
-    ? (isDark ? '#00c9b1' : '#0f6e56')
+    ? (isDark ? '#f3c9dc' : '#5b4ad1')
     : changeType === 'warn'
-      ? '#ef9f27'
-      : '#e24b4a'
+      ? (isDark ? '#ffe0a6' : '#b8860b')
+      : (isDark ? '#ffd1e0' : '#d6568f')
 
-  const iconBg = isDarkTeal
-    ? 'rgba(255,255,255,0.13)'
-    : isDarkSlate
-      ? 'rgba(226,75,74,0.14)'
-      : color === 'glass'
-        ? '#e0f7f5'
-        : '#faeeda'
+  const iconBg = isDark
+    ? 'rgba(255,255,255,0.18)'
+    : color === 'glass'
+      ? 'rgba(91,74,209,0.12)'
+      : 'rgba(240,164,196,0.3)'
 
-  const iconColor = isDarkTeal ? '#fff'
-    : isDarkSlate ? '#e24b4a'
-      : color === 'glass' ? '#007d72'
-        : '#855000'
+  const iconColor = isDark ? '#fff'
+    : color === 'glass' ? '#5b4ad1'
+      : '#d6568f'
 
   const miniBarData = [40, 55, 45, 70, 60, 80, 100]
 
   return (
-    <div className="rounded-2xl p-5 relative overflow-hidden transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl" style={bgStyle}>
+    <div
+      className="rounded-2xl p-5 relative overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-lavender/30 shadow-lg shadow-lavender/10"
+      style={bgStyle}
+    >
       {/* Orb effects */}
       <div style={{
         position: 'absolute', top: -28, right: -28, width: 110, height: 110,
         borderRadius: '50%',
-        background: isDarkTeal
-          ? 'radial-gradient(circle,rgba(0,201,177,.25) 0%,transparent 65%)'
-          : isDarkSlate
-            ? 'radial-gradient(circle,rgba(226,75,74,.15) 0%,transparent 65%)'
-            : 'radial-gradient(circle,rgba(0,201,177,.1) 0%,transparent 65%)',
+        background: isDark
+          ? 'radial-gradient(circle,rgba(255,255,255,.22) 0%,transparent 65%)'
+          : 'radial-gradient(circle,rgba(180,139,208,.25) 0%,transparent 65%)',
         pointerEvents: 'none',
       }} />
 
@@ -80,8 +78,8 @@ export default function DashboardCard({
             </div>
           )}
           <div style={{ position: 'absolute', top: 18, right: 18, textAlign: 'right' }}>
-            <div style={{ fontSize: 30, fontWeight: 600, color: '#fff', lineHeight: 1 }}>{bigNumber}</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 1 }}>documente</div>
+            <div style={{ fontSize: 30, fontWeight: 600, color: valueColor, lineHeight: 1 }}>{bigNumber}</div>
+            <div style={{ fontSize: 10, color: labelColor, marginTop: 1 }}>documente</div>
           </div>
         </>
       )}
@@ -109,7 +107,7 @@ export default function DashboardCard({
 
       {/* Divider for dark cards */}
       {isDark && (
-        <div style={{ height: 1, background: 'rgba(255,255,255,.08)', margin: '8px 0' }} />
+        <div style={{ height: 1, background: 'rgba(255,255,255,.15)', margin: '8px 0' }} />
       )}
 
       {/* Change */}
@@ -117,9 +115,7 @@ export default function DashboardCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 500, color: changeColor }}>
           {changeType === 'up'
             ? <TrendingUp size={12} />
-            : changeType === 'warn'
-              ? <TrendingDown size={12} />
-              : <TrendingDown size={12} />}
+            : <TrendingDown size={12} />}
           {change}
         </div>
       )}
@@ -127,11 +123,11 @@ export default function DashboardCard({
       {/* Progress bar (card 3 style) */}
       {progress !== undefined && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b9aa5', marginBottom: 4 }}>
-            <span>{progressLabel}</span><span style={{ fontWeight: 500, color: '#0d2b32' }}>{progress}%</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6a63d4', marginBottom: 4 }}>
+            <span>{progressLabel}</span><span style={{ fontWeight: 500, color: '#352a6e' }}>{progress}%</span>
           </div>
-          <div style={{ height: 5, background: '#e0f0f3', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ height: 5, width: `${progress}%`, background: '#ef9f27', borderRadius: 10 }} />
+          <div style={{ height: 5, background: 'rgba(180,139,208,0.25)', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ height: 5, width: `${progress}%`, background: '#5b4ad1', borderRadius: 10 }} />
           </div>
         </div>
       )}
@@ -142,7 +138,9 @@ export default function DashboardCard({
           {miniBarData.map((h, i) => (
             <div key={i} style={{
               flex: 1, height: `${h}%`, borderRadius: '3px 3px 0 0',
-              background: i === miniBarData.length - 1 ? '#00c9b1' : 'rgba(0,201,177,.3)',
+              background: i === miniBarData.length - 1
+                ? (isDark ? '#fff' : '#5b4ad1')
+                : (isDark ? 'rgba(255,255,255,.4)' : 'rgba(91,74,209,.3)'),
             }} />
           ))}
         </div>
@@ -154,9 +152,9 @@ export default function DashboardCard({
           display: 'inline-flex', alignItems: 'center', gap: 4,
           marginTop: 10, fontSize: 10, fontWeight: 600,
           padding: '3px 9px', borderRadius: 20,
-          background: isDark ? 'rgba(0,201,177,.15)' : 'transparent',
-          border: isDark ? '1px solid rgba(0,201,177,.3)' : '1px solid #00c9b1',
-          color: isDark ? '#00c9b1' : '#007d72',
+          background: isDark ? 'rgba(255,255,255,.18)' : 'rgba(91,74,209,.1)',
+          border: isDark ? '1px solid rgba(255,255,255,.3)' : '1px solid rgba(91,74,209,.3)',
+          color: isDark ? '#fff' : '#5b4ad1',
         }}>
           {tag}
         </div>

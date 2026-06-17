@@ -65,22 +65,22 @@ export default function Sidebar({ pendingCount = 0 }) {
     <motion.aside
       variants={sidebarVariants}
       animate={collapsed ? 'collapsed' : 'expanded'}
-      className="mt-[88px] mb-6 ml-3 mr-3 h-[calc(100vh-7rem)] bg-white/[0.07] backdrop-blur-xl border border-white/[0.12] rounded-3xl flex flex-col flex-shrink-0 relative overflow-hidden"
-      style={{ boxShadow: '0 8px 32px 0 rgba(5,50,45,0.35)' }}
+      className="mt-[88px] mb-6 ml-3 mr-3 h-[calc(100vh-7rem)] bg-white/50 backdrop-blur-xl border border-lavender/30 rounded-3xl flex flex-col flex-shrink-0 relative overflow-hidden"
+      style={{ boxShadow: '0 8px 32px 0 rgba(91,74,209,0.18)' }}
     >
       {/* Glow effects */}
-      <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#72B0AB]/35 blur-2xl pointer-events-none" />
-      <div className="absolute bottom-16 -left-12 w-40 h-40 rounded-full bg-[#FE9179]/25 blur-2xl pointer-events-none" />
+      <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-lavender/30 blur-2xl pointer-events-none" />
+      <div className="absolute bottom-16 -left-12 w-40 h-40 rounded-full bg-pastelpink/30 blur-2xl pointer-events-none" />
 
       {/* Logo */}
-      <div className="px-3 py-5 border-b border-white/[0.07] flex items-center flex-shrink-0">
+      <div className="px-3 py-5 border-b border-lavender/20 flex items-center flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#72B0AB] to-[#FE9179] flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-periwinkle to-lavender flex items-center justify-center flex-shrink-0 shadow-lg shadow-periwinkle/30">
             <TrendingUp size={18} className="text-white" />
           </div>
           <motion.div variants={labelVariants} className="min-w-0 overflow-hidden">
-            <p className="text-white font-semibold text-[15px] leading-tight tracking-tight whitespace-nowrap">EnterpriseFlow</p>
-            <p className="text-[#BCDDDC]/70 text-[9px] font-semibold tracking-[0.15em] uppercase mt-0.5 whitespace-nowrap">Financial OS</p>
+            <p className="text-ink font-semibold text-[15px] leading-tight tracking-tight whitespace-nowrap font-serif">EnterpriseFlow</p>
+            <p className="text-blueviolet/70 text-[9px] font-semibold tracking-[0.15em] uppercase mt-0.5 whitespace-nowrap">Financial OS</p>
           </motion.div>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function Sidebar({ pendingCount = 0 }) {
       <nav className="flex-1 px-2 py-4 overflow-y-auto overflow-x-hidden">
         <motion.p
           variants={sectionLabelVariants}
-          className="text-white/40 text-[9px] font-bold tracking-[0.15em] uppercase px-2 mb-2 overflow-hidden"
+          className="text-blueviolet/50 text-[9px] font-bold tracking-[0.15em] uppercase px-2 mb-2 overflow-hidden"
         >
           Principal
         </motion.p>
@@ -100,24 +100,24 @@ export default function Sidebar({ pendingCount = 0 }) {
             to={to}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
-              `relative flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-sm mb-0.5 transition-all duration-150
+              `relative flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl text-sm mb-0.5 transition-all duration-200
                ${isActive
-                ? 'bg-gradient-to-r from-[#72B0AB]/30 to-[#FE9179]/15 text-[#BCDDDC] font-semibold border border-[#72B0AB]/40'
-                : 'text-white/60 hover:text-white/95 hover:bg-white/[0.10]'
+                ? 'bg-gradient-to-r from-periwinkle/20 to-lavender/15 text-periwinkle font-semibold border border-periwinkle/30'
+                : 'text-ink/60 hover:text-ink hover:bg-white/50'
               }`
             }
           >
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-[#72B0AB] to-[#FE9179] rounded-r-full" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-periwinkle to-lavender rounded-r-full" />
                 )}
                 <Icon size={16} className="flex-shrink-0" />
                 <motion.span variants={labelVariants} className="flex-1 overflow-hidden whitespace-nowrap">
                   {label}
                 </motion.span>
                 {badge && pendingCount > 0 && (
-                  <motion.span variants={labelVariants} className="bg-red-500/30 text-red-300 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                  <motion.span variants={labelVariants} className="bg-pastelpink/40 text-[#9d2b54] text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
                     {pendingCount}
                   </motion.span>
                 )}
@@ -130,7 +130,7 @@ export default function Sidebar({ pendingCount = 0 }) {
           <>
             <motion.p
               variants={sectionLabelVariants}
-              className="text-white/40 text-[9px] font-bold tracking-[0.15em] uppercase px-2 mb-2 mt-5 overflow-hidden"
+              className="text-blueviolet/50 text-[9px] font-bold tracking-[0.15em] uppercase px-2 mb-2 mt-5 overflow-hidden"
             >
               Sistem
             </motion.p>
@@ -140,17 +140,17 @@ export default function Sidebar({ pendingCount = 0 }) {
                 to={to}
                 title={collapsed ? label : undefined}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-sm mb-0.5 transition-all duration-150
+                  `relative flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl text-sm mb-0.5 transition-all duration-200
                    ${isActive
-                    ? 'bg-gradient-to-r from-[#72B0AB]/30 to-[#FE9179]/15 text-[#BCDDDC] font-semibold border border-[#72B0AB]/40'
-                    : 'text-white/60 hover:text-white/95 hover:bg-white/[0.10]'
+                    ? 'bg-gradient-to-r from-periwinkle/20 to-lavender/15 text-periwinkle font-semibold border border-periwinkle/30'
+                    : 'text-ink/60 hover:text-ink hover:bg-white/50'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-[#72B0AB] to-[#FE9179] rounded-r-full" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-periwinkle to-lavender rounded-r-full" />
                     )}
                     <Icon size={16} className="flex-shrink-0" />
                     <motion.span variants={labelVariants} className="overflow-hidden whitespace-nowrap">
@@ -165,21 +165,21 @@ export default function Sidebar({ pendingCount = 0 }) {
       </nav>
 
       {/* User card */}
-      <div className="p-2 border-t border-white/[0.07] flex-shrink-0">
-        <div className="flex items-center gap-2.5 px-2.5 py-2.5 bg-white/[0.08] border border-white/[0.14] rounded-xl min-w-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#72B0AB] to-[#FE9179] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+      <div className="p-2 border-t border-lavender/20 flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-2.5 py-2.5 bg-white/50 border border-lavender/30 rounded-xl min-w-0">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-periwinkle to-lavender flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
             {initials}
           </div>
           <motion.div variants={labelVariants} className="flex-1 min-w-0 overflow-hidden">
-            <p className="text-white/90 text-xs font-medium truncate whitespace-nowrap">
+            <p className="text-ink text-xs font-semibold truncate whitespace-nowrap">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-[#BCDDDC]/60 text-[10px] truncate whitespace-nowrap">{user?.role}</p>
+            <p className="text-blueviolet/70 text-[10px] truncate whitespace-nowrap">{user?.role}</p>
           </motion.div>
           <button
             onClick={handleLogout}
             title="Deconectare"
-            className="text-white/30 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+            className="text-ink/40 hover:text-[#9d2b54] transition-colors p-1 flex-shrink-0"
           >
             <LogOut size={14} />
           </button>
@@ -197,7 +197,7 @@ const ToggleClose = ({ collapsed, setCollapsed }) => {
       layout
       onClick={() => setCollapsed((c) => !c)}
       title={collapsed ? 'Expandeaza meniul' : undefined}
-      className="flex items-center w-full border-t border-white/[0.07] text-white/50 hover:text-[#72B0AB] hover:bg-white/[0.06] transition-colors flex-shrink-0"
+      className="flex items-center w-full border-t border-lavender/20 text-ink/50 hover:text-periwinkle hover:bg-white/50 transition-colors flex-shrink-0"
     >
       <motion.div
         layout
