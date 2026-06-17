@@ -30,14 +30,14 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-[#f7f1f8]">
+    <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-[#f0f3fa]">
 
-      {/* Full-screen animated background */}
+      {/* Full-screen animated background - Fără roz, doar nuanțele reci/profunde din dashboard */}
       <div className="absolute inset-0 z-0">
         <ColorBends
           rotation={90}
           speed={0.2}
-          colors={["#5b4ad1", "#f0a4c4", "#b48bd0", "#6a63d4", "#f3c9dc"]}
+          colors={["#5b4ad1", "#6a63d4", "#b48bd0", "#e2e8f5", "#f0f3fa"]}
           transparent
           autoRotate={0}
           scale={1}
@@ -45,15 +45,15 @@ export default function Login() {
           warpStrength={1}
           mouseInfluence={1}
           parallax={0.5}
-          noise={0.15}
+          noise={0.12}
           iterations={1}
-          intensity={1.5}
+          intensity={1.4}
           bandWidth={6}
         />
       </div>
 
-      {/* Subtle overlay for readability */}
-      <div className="absolute inset-0 z-10 bg-[#f7f1f8]/30" />
+      {/* Overlay subtil pentru difuzie curată */}
+      <div className="absolute inset-0 z-10 bg-white/20 backdrop-blur-[1px]" />
 
       {/* Content */}
       <div className="relative z-20 w-full max-w-lg mx-auto px-6">
@@ -62,7 +62,7 @@ export default function Login() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-6">
             <motion.div
-              className="w-14 h-14 rounded-xl bg-[#5b4ad1]/10 border border-[#5b4ad1]/20 backdrop-blur-sm flex items-center justify-center"
+              className="w-14 h-14 rounded-xl bg-[#5b4ad1]/10 border border-[#b48bd0]/40 backdrop-blur-md flex items-center justify-center"
               initial={{ filter: 'blur(10px)', opacity: 0, y: -50 }}
               animate={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: 'easeOut' }}
@@ -86,7 +86,7 @@ export default function Login() {
                 delay={60}
                 threshold={0}
                 rootMargin="0px"
-                className="text-[#5b4ad1]/60 text-[11px] font-medium tracking-[0.18em] uppercase"
+                className="text-[#6a63d4]/70 text-[11px] font-medium tracking-[0.18em] uppercase"
               />
             </div>
           </div>
@@ -97,34 +97,34 @@ export default function Login() {
           >
             Bun venit!
           </h1>
-          <p className="text-[#5b4ad1]/70 text-sm text-center">
+          <p className="text-[#6a63d4]/80 text-sm text-center">
             Autentifică-te pentru a continua
           </p>
         </div>
 
-        {/* Glass card */}
-        <div className="bg-white/60 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl px-8 py-14 shadow-2xl">
+        {/* Glass card - Albastru-indigo foarte deschis, curat și translucid */}
+        <div className="bg-[#f5f7fc]/70 backdrop-blur-2xl border border-[#b48bd0]/30 rounded-2xl px-8 py-12 shadow-xl shadow-[#5b4ad1]/10">
 
           {error && (
-            <div className="bg-red-500/10 border border-red-400/30 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
+            <div className="bg-red-500/10 border border-red-400/20 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-[10.5px] font-semibold text-[#5b4ad1]/70 uppercase tracking-widest mb-1.5">
+              <label className="block text-[10.5px] font-semibold text-[#352a6e]/80 uppercase tracking-widest mb-1.5">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3.5 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl
-                           text-[#352a6e] placeholder-[#b48bd0]/60 outline-none
-                           hover:border-[#5b4ad1]/40 hover:bg-white/70
-                           focus:border-[#5b4ad1]/70 focus:bg-white/70
-                           transition-[border-color,background-color] duration-150"
+                className="w-full px-4 py-3.5 text-sm bg-white/70 border border-[#b48bd0]/30 rounded-xl
+                           text-[#352a6e] placeholder-[#6a63d4]/40 outline-none
+                           hover:border-[#5b4ad1]/50 hover:bg-white/90
+                           focus:border-[#5b4ad1] focus:bg-white
+                           transition-all duration-150"
                 placeholder="email@companie.ro"
                 required
                 autoComplete="email"
@@ -132,7 +132,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-[10.5px] font-semibold text-[#5b4ad1]/70 uppercase tracking-widest mb-1.5">
+              <label className="block text-[10.5px] font-semibold text-[#352a6e]/80 uppercase tracking-widest mb-1.5">
                 Parolă
               </label>
               <div className="relative">
@@ -140,11 +140,11 @@ export default function Login() {
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-3.5 pr-11 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl
-                             text-[#352a6e] placeholder-[#b48bd0]/60 outline-none
-                             hover:border-[#5b4ad1]/40 hover:bg-white/70
-                             focus:border-[#5b4ad1]/70 focus:bg-white/70
-                             transition-[border-color,background-color] duration-150"
+                  className="w-full px-4 py-3.5 pr-11 text-sm bg-white/70 border border-[#b48bd0]/30 rounded-xl
+                             text-[#352a6e] placeholder-[#6a63d4]/40 outline-none
+                             hover:border-[#5b4ad1]/50 hover:bg-white/90
+                             focus:border-[#5b4ad1] focus:bg-white
+                             transition-all duration-150"
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
@@ -152,7 +152,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPass(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b48bd0] hover:text-[#5b4ad1] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6a63d4]/50 hover:text-[#5b4ad1] transition-colors"
                 >
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -162,10 +162,10 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3.5 mt-1
+              className="w-full flex items-center justify-center gap-2 py-3.5 mt-2
                          bg-[#5b4ad1] text-white text-sm font-semibold rounded-xl
-                         hover:bg-[#6a63d4] transition-all shadow-lg shadow-[#5b4ad1]/30
-                         disabled:opacity-50 disabled:cursor-not-allowed"
+                         hover:bg-[#6a63d4] active:scale-[0.99] transition-all shadow-lg shadow-[#5b4ad1]/20
+                         disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
             >
               {loading ? (
                 <>
@@ -182,21 +182,22 @@ export default function Login() {
           </form>
 
           {/* Demo accounts */}
-          <div className="mt-5 pt-5 border-t border-[#b48bd0]/20">
-            <p className="text-[9.5px] font-bold text-[#5b4ad1]/40 uppercase tracking-widest mb-2.5">
+          <div className="mt-6 pt-5 border-t border-[#b48bd0]/20">
+            <p className="text-[9.5px] font-bold text-[#6a63d4]/60 uppercase tracking-widest mb-2.5">
               Conturi demo
             </p>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#352a6e]/70">manager@demo.ro</span>
-                <span className="text-[#b48bd0]">parola123 · Manager</span>
+                <span className="text-[#352a6e]/70 font-medium">manager@demo.ro</span>
+                <span className="text-[#5b4ad1] font-semibold">parola123 · <span className="text-[#6a63d4]/70 font-normal">Manager</span></span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#352a6e]/70">angajat@demo.ro</span>
-                <span className="text-[#b48bd0]">parola123 · Angajat</span>
+                <span className="text-[#352a6e]/70 font-medium">angajat@demo.ro</span>
+                <span className="text-[#5b4ad1] font-semibold">parola123 · <span className="text-[#6a63d4]/70 font-normal">Angajat</span></span>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

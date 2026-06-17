@@ -20,23 +20,24 @@ export default function Stocuri() {
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [form, setForm] = useState({ name: '', sku: '', quantity: '', minQuantity: '2', unit: 'buc.', unitPrice: '', category: '' })
-
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     const q = searchParams.get('q')
-    if (q) {
-      setSearch(q)
-      setSearchParams({}, { replace: true })
-    }
+    if (q) { setSearch(q); setSearchParams({}, { replace: true }) }
   }, [searchParams, setSearchParams])
 
   const filteredStocks = search.trim()
     ? stocks.filter(s => [s.name, s.sku, s.category].some(f => f?.toLowerCase().includes(search.trim().toLowerCase())))
     : stocks
 
-  const openCreate = () => { setEditItem(null); setForm({ name: '', sku: '', quantity: '', minQuantity: '2', unit: 'buc.', unitPrice: '', category: '' }); setShowForm(true) }
+  const openCreate = () => {
+    setEditItem(null)
+    setForm({ name: '', sku: '', quantity: '', minQuantity: '2', unit: 'buc.', unitPrice: '', category: '' })
+    setShowForm(true)
+  }
+
   const openEdit = (item) => {
     setEditItem(item)
     setForm({ name: item.name, sku: item.sku || '', quantity: item.quantity, minQuantity: item.minQuantity, unit: item.unit, unitPrice: item.unitPrice || '', category: item.category || '' })
@@ -46,185 +47,164 @@ export default function Stocuri() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      if (editItem) {
-        await update(editItem._id, form)
-        success('Produs actualizat cu succes.')
-      } else {
-        await create(form)
-        success('Produs adăugat în nomenclator.')
-      }
+      if (editItem) { await update(editItem._id, form); success('Produs actualizat cu succes.') }
+      else { await create(form); success('Produs adăugat în nomenclator.') }
       setShowForm(false)
-    } catch (err) {
-      toastError(err.response?.data?.message || 'Eroare.')
-    }
+    } catch (err) { toastError(err.response?.data?.message || 'Eroare.') }
   }
 
   const handleDelete = async (id, name) => {
     if (!confirm(`Ștergi produsul "${name}"?`)) return
-    try {
-      await remove(id)
-      success('Produs șters.')
-    } catch (err) {
-      toastError(err.response?.data?.message || 'Eroare la ștergere.')
-    }
+    try { await remove(id); success('Produs șters.') }
+    catch (err) { toastError(err.response?.data?.message || 'Eroare la ștergere.') }
   }
+
+  const inputCls = "w-full px-3 py-2 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 focus:bg-white/80 text-[#352a6e] placeholder-[#b48bd0]/60 transition-all duration-150"
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
       <Sidebar pendingCount={pendingCount} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <Navbar
           title="Evidență stocuri"
           subtitle={`${stocks.length} produse înregistrate${isManager ? ' — vizualizare' : ' — gestiune completă'}`}
         />
 
-        <main className="flex-1 overflow-y-auto px-7 pb-6">
-          {/* Low stock alert */}
-          {lowStockCount > 0 && (
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5 text-sm text-amber-700 mt-4">
-              <AlertTriangle size={15} />
-              <span><strong>{lowStockCount} produse</strong> cu stoc redus sau critic necesită reaprovizionare.</span>
-            </div>
-          )}
+        <main className="flex-1 overflow-hidden flex flex-col px-7 pb-6 min-h-0">
 
-          {/* Role info banner */}
-          {isManager && (
-            <div className="flex items-center gap-3 mb-5 px-4 py-3 rounded-xl text-sm mt-4"
-              style={{ background: 'rgba(0,201,177,.06)', border: '1px solid rgba(0,201,177,.2)', color: '#007d72' }}>
-              <Eye size={15} />
-              Vizualizare în mod citire. Angajații gestionează direct inventarul — dvs. monitorizați situația.
+          {/* Alerts + actions row */}
+          <div className="flex items-center gap-3 mb-3 flex-shrink-0 flex-wrap">
+            {lowStockCount > 0 && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700">
+                <AlertTriangle size={13} />
+                <span><strong>{lowStockCount} produse</strong> cu stoc redus sau critic.</span>
+              </div>
+            )}
+            {isManager && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-[#f7f1f8] border border-[#b48bd0]/25 text-[#5b4ad1]">
+                <Eye size={13} />
+                Vizualizare read-only
+              </div>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {search && (
+                <div className="flex items-center gap-1.5 text-xs text-[#5b4ad1] bg-[#f7f1f8] border border-[#b48bd0]/25 rounded-lg px-2.5 py-1.5">
+                  <Search size={11} />
+                  „{search}"
+                  <button onClick={() => setSearch('')} className="text-[#b48bd0] hover:text-[#352a6e] ml-1 transition-colors"><X size={11} /></button>
+                </div>
+              )}
+              {!isManager && (
+                <button onClick={openCreate}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[#5b4ad1] hover:bg-[#6a63d4] text-white text-xs font-medium rounded-xl shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
+                  <Plus size={13} /> Adaugă produs
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Add button - ANGAJAT only */}
-          {!isManager && (
-            <div className="flex justify-end mb-4 mt-4">
-              <button onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-2 text-white text-[12.5px] font-medium rounded-lg"
-                style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
-                <Plus size={14} /> Adaugă produs
-              </button>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl border border-[#d8edf0] overflow-hidden mt-4">
-            <div className="px-5 py-4 border-b border-[#edf5f7] flex items-center justify-between gap-4">
-              <h3 className="text-[13.5px] font-semibold text-[#0d2b32] flex-shrink-0">Nomenclator produse</h3>
-              <span className="text-[11px] text-[#8ab0b8] flex-shrink-0">
-                {search ? `${filteredStocks.length} din ${stocks.length} produse` : `${stocks.length} produse total`}
+          {/* Table card — fills remaining height, scrollable body */}
+          <div className="flex-1 bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl overflow-hidden flex flex-col min-h-0">
+            <div className="px-5 py-3 border-b border-[#b48bd0]/15 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-[13px] font-semibold text-[#352a6e]">Nomenclator produse</h3>
+              <span className="text-[11px] text-[#b48bd0]">
+                {search ? `${filteredStocks.length} din ${stocks.length}` : `${stocks.length} produse`}
               </span>
             </div>
 
-            {search && (
-              <div className="flex items-center gap-2 px-5 py-2.5 border-b border-[#edf5f7] text-[12px] text-[#6b9aa5]" style={{ background: '#f5fcfc' }}>
-                <Search size={12} />
-                Filtrat după „{search}”
-                <button onClick={() => setSearch('')} className="ml-auto text-[#8ab0b8] hover:text-[#0d2b32] flex items-center gap-1">
-                  <X size={12} /> Șterge filtrul
-                </button>
-              </div>
-            )}
-
             {loading ? (
-              <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-[#00c9b1] border-t-transparent rounded-full animate-spin" /></div>
+              <div className="flex justify-center py-12 flex-shrink-0">
+                <div className="w-7 h-7 border-3 border-[#5b4ad1] border-t-transparent rounded-full animate-spin" />
+              </div>
             ) : stocks.length === 0 ? (
-              <div className="flex flex-col items-center py-12 text-[#8ab0b8]">
-                <Package size={32} className="mb-3 opacity-40" />
+              <div className="flex flex-col items-center py-10 text-[#b48bd0] flex-shrink-0">
+                <Package size={28} className="mb-2 opacity-40" />
                 <p className="text-sm">Niciun produs adăugat</p>
-                {!isManager && <button onClick={openCreate} className="mt-3 text-[12px] text-[#00a090] font-medium">+ Adaugă primul produs</button>}
+                {!isManager && <button onClick={openCreate} className="mt-2 text-xs text-[#5b4ad1] font-medium hover:underline">+ Adaugă primul produs</button>}
               </div>
             ) : filteredStocks.length === 0 ? (
-              <div className="flex flex-col items-center py-12 text-[#8ab0b8]">
-                <Search size={32} className="mb-3 opacity-40" />
-                <p className="text-sm">Niciun produs nu corespunde căutării „{search}”</p>
+              <div className="flex flex-col items-center py-10 text-[#b48bd0] flex-shrink-0">
+                <Search size={28} className="mb-2 opacity-40" />
+                <p className="text-sm">Niciun produs pentru „{search}"</p>
               </div>
             ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#f5fcfc] border-b border-[#edf5f7]">
-                    {['Produs', 'SKU', 'Cantitate curentă', 'Preț unitar', 'Actualizat la', isManager ? '' : 'Acțiuni'].map((h, i) => (
-                      <th key={h} className={`text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider px-5 py-3 ${i === 0 ? 'text-left' : 'text-center'}`}>{h}</th>
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {/* Fixed header */}
+                <div className="flex-shrink-0 border-b border-[#b48bd0]/10">
+                  <div className="grid px-5 py-2.5 bg-[#f7f1f8]/60" style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1fr 1fr auto' }}>
+                    {['Produs', 'SKU', 'Cantitate', 'Preț unitar', 'Actualizat la', isManager ? '' : 'Acțiuni'].map((h, i) => (
+                      <span key={h} className={`text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider ${i > 0 ? 'text-center' : ''}`}>{h}</span>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
+                  </div>
+                </div>
+                {/* Scrollable rows */}
+                <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                   {filteredStocks.map(s => (
-                    <tr key={s._id} className="border-b border-[#edf5f7] hover:bg-[#f9fdfd] transition-colors">
-                      <td className="px-5 py-3">
-                        <p className="text-[13px] font-medium text-[#0d2b32]">{s.name}</p>
-                        {s.category && <p className="text-[11px] text-[#8ab0b8]">{s.category}</p>}
-                      </td>
-                      <td className="px-5 py-3 text-center"><span className="text-[12px] font-mono text-[#6b9aa5]">{s.sku || '—'}</span></td>
-                      <td className="px-5 py-3 text-center">
-                        <span className="text-[13px] font-medium text-[#0d2b32]">{s.quantity} {s.unit}</span>
-                      </td>
-                      <td className="px-5 py-3 text-center text-[12px] text-[#6b9aa5]">
+                    <div key={s._id} className="grid px-5 py-2.5 border-b border-[#b48bd0]/10 hover:bg-[#f7f1f8]/40 transition-colors duration-150 items-center" style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1fr 1fr auto' }}>
+                      <div>
+                        <p className="text-[12.5px] font-medium text-[#352a6e]">{s.name}</p>
+                        {s.category && <p className="text-[10.5px] text-[#b48bd0]">{s.category}</p>}
+                      </div>
+                      <div className="text-center"><span className="text-[11.5px] font-mono text-[#6a63d4]">{s.sku || '—'}</span></div>
+                      <div className="text-center"><span className="text-[12px] font-medium text-[#352a6e]">{s.quantity} {s.unit}</span></div>
+                      <div className="text-center text-[11.5px] text-[#b48bd0]">
                         {s.unitPrice ? `${Number(s.unitPrice).toLocaleString('ro-RO')} RON` : '—'}
-                      </td>
-                      <td className="px-5 py-3 text-center text-[12px] text-[#6b9aa5]">{formatDate(s.createdAt)}</td>
+                      </div>
+                      <div className="text-center text-[11.5px] text-[#b48bd0]">{formatDate(s.createdAt)}</div>
                       {!isManager && (
-                        <td className="px-5 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => openEdit(s)} className="p-1.5 text-[#8ab0b8] hover:text-[#00a090] hover:bg-[#e0f7f5] rounded-lg transition-colors"><Edit2 size={13} /></button>
-                            <button onClick={() => handleDelete(s._id, s.name)} className="p-1.5 text-[#8ab0b8] hover:text-[#a32d2d] hover:bg-[#fcebeb] rounded-lg transition-colors"><Trash2 size={13} /></button>
-                          </div>
-                        </td>
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => openEdit(s)} className="p-1.5 text-[#b48bd0] hover:text-[#5b4ad1] hover:bg-[#f7f1f8] rounded-lg transition-all duration-150"><Edit2 size={12} /></button>
+                          <button onClick={() => handleDelete(s._id, s.name)} className="p-1.5 text-[#b48bd0] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-150"><Trash2 size={12} /></button>
+                        </div>
                       )}
-                    </tr>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
             )}
           </div>
         </main>
       </div>
 
-      {/* Modal - ANGAJAT only */}
       {showForm && !isManager && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="p-5 border-b border-[#d8edf0] flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-[#0d2b32]">{editItem ? 'Editează produs' : 'Produs nou'}</h3>
-              <button onClick={() => setShowForm(false)} className="text-[#8ab0b8] hover:text-[#0d2b32]"><X size={18} /></button>
+        <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-5 border-b border-[#b48bd0]/20 flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-[#352a6e]">{editItem ? 'Editează produs' : 'Produs nou'}</h3>
+              <button onClick={() => setShowForm(false)} className="text-[#b48bd0] hover:text-[#352a6e] transition-colors"><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-3">
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Denumire produs</label>
-                <input required className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                  value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Laptop Dell XPS 15" />
+                <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Denumire produs</label>
+                <input required className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Laptop Dell XPS 15" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">SKU</label>
-                  <input className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="Ex: DLX15" />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">SKU</label>
+                  <input className={inputCls} value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="Ex: DLX15" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Categorie</label>
-                  <input className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="IT, Birou..." />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Categorie</label>
+                  <input className={inputCls} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="IT, Birou..." />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Cantitate</label>
-                  <input required type="number" min="0" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Cantitate</label>
+                  <input required type="number" min="0" className={inputCls} value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Unitate</label>
-                  <input className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Unitate</label>
+                  <input className={inputCls} value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Preț unitar (RON)</label>
-                <input type="number" step="0.01" min="0" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                  value={form.unitPrice} onChange={e => setForm(f => ({ ...f, unitPrice: e.target.value }))} placeholder="0.00" />
+                <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Preț unitar (RON)</label>
+                <input type="number" step="0.01" min="0" className={inputCls} value={form.unitPrice} onChange={e => setForm(f => ({ ...f, unitPrice: e.target.value }))} placeholder="0.00" />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5]">Anulează</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white" style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white/60 border border-[#b48bd0]/30 text-[#b48bd0] hover:text-[#352a6e] transition-all duration-200">Anulează</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
                   {editItem ? 'Salvează' : 'Adaugă produs'}
                 </button>
               </div>

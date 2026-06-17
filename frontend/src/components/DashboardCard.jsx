@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react'
 export default function DashboardCard({
   label, value, change, changeType = 'up',
   color = 'teal-dark', icon: Icon,
-  miniBar, tag, progress, progressLabel, bigNumber,
+  miniBar, tag, progress, progressLabel, bigNumber, showOrb = true,
 }) {
   const isPrimary = color === 'teal-dark'
   const isAccent = color === 'dark-slate'
@@ -15,24 +15,28 @@ export default function DashboardCard({
       ? { background: 'linear-gradient(135deg,#6a63d4,#b48bd0)', border: '1px solid rgba(255,255,255,0.18)' }
       : color === 'glass'
         ? { background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(180,139,208,0.3)', backdropFilter: 'blur(16px)' }
-        : { background: 'linear-gradient(135deg,rgba(255,255,255,0.6),rgba(243,201,220,0.45))', border: '1px solid rgba(180,139,208,0.3)', backdropFilter: 'blur(16px)' }
+        : color === 'white-blue'
+          ? { background: 'linear-gradient(135deg,rgba(255,255,255,0.62),rgba(143,208,255,0.34))', border: '1px solid rgba(143,208,255,0.38)', backdropFilter: 'blur(16px)' }
+          : { background: 'linear-gradient(135deg,rgba(255,255,255,0.6),rgba(243,201,220,0.45))', border: '1px solid rgba(180,139,208,0.3)', backdropFilter: 'blur(16px)' }
 
   const labelColor = isDark ? 'rgba(255,255,255,0.7)' : '#6a63d4'
   const valueColor = isDark ? '#fff' : '#352a6e'
   const changeColor = changeType === 'up'
     ? (isDark ? '#f3c9dc' : '#5b4ad1')
     : changeType === 'warn'
-      ? (isDark ? '#ffe0a6' : '#b8860b')
+      ? (color === 'white-blue' ? '#5b4ad1' : (isDark ? '#ffe0a6' : '#b8860b'))
       : (isDark ? '#ffd1e0' : '#d6568f')
 
   const iconBg = isDark
     ? 'rgba(255,255,255,0.18)'
     : color === 'glass'
       ? 'rgba(91,74,209,0.12)'
-      : 'rgba(240,164,196,0.3)'
+      : color === 'white-blue'
+        ? 'rgba(143,208,255,0.35)'
+        : 'rgba(240,164,196,0.3)'
 
   const iconColor = isDark ? '#fff'
-    : color === 'glass' ? '#5b4ad1'
+    : color === 'glass' || color === 'white-blue' ? '#5b4ad1'
       : '#d6568f'
 
   const miniBarData = [40, 55, 45, 70, 60, 80, 100]
@@ -43,14 +47,16 @@ export default function DashboardCard({
       style={bgStyle}
     >
       {/* Orb effects */}
-      <div style={{
-        position: 'absolute', top: -28, right: -28, width: 110, height: 110,
-        borderRadius: '50%',
-        background: isDark
-          ? 'radial-gradient(circle,rgba(255,255,255,.22) 0%,transparent 65%)'
-          : 'radial-gradient(circle,rgba(180,139,208,.25) 0%,transparent 65%)',
-        pointerEvents: 'none',
-      }} />
+      {showOrb && (
+        <div style={{
+          position: 'absolute', top: -28, right: -28, width: 110, height: 110,
+          borderRadius: '50%',
+          background: isDark
+            ? 'radial-gradient(circle,rgba(255,255,255,.22) 0%,transparent 65%)'
+            : 'radial-gradient(circle,rgba(180,139,208,.25) 0%,transparent 65%)',
+          pointerEvents: 'none',
+        }} />
+      )}
 
       {/* Icon */}
       {Icon && !bigNumber && (

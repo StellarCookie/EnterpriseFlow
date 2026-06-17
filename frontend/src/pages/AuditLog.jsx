@@ -248,100 +248,84 @@ export default function AuditLogPage() {
     setPage(1);
   };
 
+  const filterSelectCls = "text-[11.5px] border border-[#b48bd0]/30 rounded-xl px-3 py-1.5 text-[#352a6e] outline-none focus:border-[#5b4ad1]/60 bg-white/60 backdrop-blur-sm transition-all duration-150"
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
       <Sidebar pendingCount={pendingCount} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <Navbar title="Audit Log" subtitle={`${total} înregistrări`} showSearch={false} />
 
-        <main className="flex-1 overflow-y-auto px-7 pb-6 mt-6 space-y-4">
+        <main className="flex-1 overflow-hidden flex flex-col px-7 pb-6 gap-3 min-h-0">
 
-          {/* ── Filtre ── */}
-          <div className="bg-white rounded-2xl border border-[#d8edf0] px-5 py-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <Filter size={14} className="text-[#8ab0b8]" />
-
-              {/* REPARAT: Filtrul conține doar opțiunile Document (Order), Utilizator (User) și Stoc (Stock) */}
-              <select value={filters.entity} onChange={e => setFilter('entity', e.target.value)}
-                className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1] bg-white font-medium">
+          {/* Filters — compact, fixed height */}
+          <div className="bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl px-4 py-3 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter size={13} className="text-[#b48bd0]" />
+              <select value={filters.entity} onChange={e => setFilter('entity', e.target.value)} className={filterSelectCls}>
                 <option value="">Toate entitățile</option>
-                {[
-                  { key: 'Order', label: 'Document' },
-                  { key: 'User',  label: 'Utilizator' },
-                  { key: 'Stock', label: 'Stoc' }
-                ].map(e =>
-                  <option key={e.key} value={e.key}>{e.label}</option>
-                )}
+                {[{ key: 'Order', label: 'Document' }, { key: 'User', label: 'Utilizator' }, { key: 'Stock', label: 'Stoc' }]
+                  .map(e => <option key={e.key} value={e.key}>{e.label}</option>)}
               </select>
-
-              <select value={filters.action} onChange={e => setFilter('action', e.target.value)}
-                className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1] bg-white">
+              <select value={filters.action} onChange={e => setFilter('action', e.target.value)} className={filterSelectCls}>
                 <option value="">Toate acțiunile</option>
-                {Object.entries(ACTION_CONFIG).map(([k, v]) =>
-                  <option key={k} value={k}>{v.label}</option>)}
+                {Object.entries(ACTION_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
-
               {isManager && users.length > 0 && (
-                <select value={filters.userId} onChange={e => setFilter('userId', e.target.value)}
-                  className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1] bg-white">
+                <select value={filters.userId} onChange={e => setFilter('userId', e.target.value)} className={filterSelectCls}>
                   <option value="">Toți utilizatorii</option>
                   {users.map(u => <option key={u._id} value={u._id}>{u.userName}</option>)}
                 </select>
               )}
-
-              <input type="date" value={filters.startDate}
-                onChange={e => setFilter('startDate', e.target.value)}
-                className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1]" />
-
-              <input type="date" value={filters.endDate}
-                onChange={e => setFilter('endDate', e.target.value)}
-                className="text-[12px] border border-[#d8edf0] rounded-lg px-3 py-1.5 text-[#6b9aa5] outline-none focus:border-[#00c9b1]" />
-
-              <button onClick={resetFilters}
-                className="ml-auto flex items-center gap-1.5 text-[12px] text-[#8ab0b8] hover:text-[#00c9b1] transition-colors">
-                <RefreshCw size={13} /> Reset
+              <input type="date" value={filters.startDate} onChange={e => setFilter('startDate', e.target.value)} className={filterSelectCls} />
+              <input type="date" value={filters.endDate} onChange={e => setFilter('endDate', e.target.value)} className={filterSelectCls} />
+              <button onClick={resetFilters} className="ml-auto flex items-center gap-1.5 text-[11.5px] text-[#b48bd0] hover:text-[#5b4ad1] transition-colors duration-150">
+                <RefreshCw size={12} /> Reset
               </button>
             </div>
           </div>
 
-          {/* ── Tabel ── */}
-          <div className="bg-white rounded-2xl border border-[#d8edf0] overflow-hidden">
+          {/* Table — fills remaining height, body scrolls */}
+          <div className="flex-1 bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl overflow-hidden flex flex-col min-h-0">
             {loading ? (
-              <div className="flex justify-center py-16">
-                <div className="w-8 h-8 border-4 border-[#00c9b1] border-t-transparent rounded-full animate-spin" />
+              <div className="flex justify-center py-12">
+                <div className="w-7 h-7 border-4 border-[#5b4ad1] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : logs.length === 0 ? (
-              <div className="text-center py-16 text-[#8ab0b8] text-[13px]">
-                Nicio înregistrare găsită.
-              </div>
+              <div className="text-center py-12 text-[#b48bd0] text-[13px]">Nicio înregistrare găsită.</div>
             ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#f5fcfc] border-b border-[#edf5f7]">
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {/* Fixed thead */}
+                <div className="flex-shrink-0 border-b border-[#b48bd0]/10">
+                  <div className="grid px-5 py-2.5 bg-[#f7f1f8]/60" style={{ gridTemplateColumns: '1fr 2fr 1.5fr 1.2fr 2rem' }}>
                     {['Acțiune', 'Entitate', 'Utilizator', 'Data', ''].map(h => (
-                      <th key={h} className="text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider px-5 py-3 text-left">
-                        {h}
-                      </th>
+                      <span key={h} className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider">{h}</span>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map(log => <LogRow key={log._id} log={log} />)}
-                </tbody>
-              </table>
+                  </div>
+                </div>
+                {/* Scrollable tbody — LogRow renders as <tr> inside a table, so wrap in table */}
+                <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                  <table className="w-full">
+                    <tbody>
+                      {logs.map(log => <LogRow key={log._id} log={log} />)}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* ── Paginare ── */}
+          {/* Pagination — fixed at bottom */}
           {pages > 1 && (
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-2 flex-shrink-0">
               {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-[12px] font-medium transition-colors
-                    ${p === page
-                      ? 'bg-[#00c9b1] text-white'
-                      : 'bg-white border border-[#d8edf0] text-[#6b9aa5] hover:border-[#00c9b1]'}`}>
+                  className={`w-7 h-7 rounded-lg text-[11.5px] font-medium transition-all duration-200 ${
+                    p === page
+                      ? 'bg-[#5b4ad1] text-white shadow-md shadow-[#5b4ad1]/25'
+                      : 'bg-white/60 border border-[#b48bd0]/25 text-[#b48bd0] hover:border-[#5b4ad1]/50 hover:text-[#5b4ad1]'
+                  }`}>
                   {p}
                 </button>
               ))}

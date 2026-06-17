@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Check, X, Clock, MessageSquare, Package, Camera } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 import { ToastContainer } from '../components/Toast'
 import { useTransactions } from '../hooks/useTransactions'
 import { useStocks } from '../hooks/useStocks'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
-import api from '../api' // Importăm instanța ta globală de axios pentru apelul către OCR
+import api from '../api'
 
 const formatRON = (n) =>
   new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2 }).format(n || 0) + ' RON'
@@ -18,26 +19,30 @@ const formatDate = (d) => {
 }
 
 const StatusBadge = ({ status }) => {
-  if (status === 'Aprobat') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#e0f7f5] text-[#0f6e56] border border-[#9fe1cb]"><Check size={9} />{status}</span>
-  if (status === 'Respins') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#fcebeb] text-[#a32d2d] border border-[#f7c1c1]"><X size={9} />{status}</span>
-  return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#faeeda] text-[#854f0b] border border-[#f5c775]"><Clock size={9} />În așteptare</span>
+  if (status === 'Aprobat') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"><Check size={9} />{status}</span>
+  if (status === 'Respins') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200"><X size={9} />{status}</span>
+  return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200"><Clock size={9} />În așteptare</span>
 }
 
 const ApprovalStep = ({ label, sublabel, state }) => {
-  const dotClass = state === 'done' ? 'bg-[#e0f7f5] border border-[#9fe1cb]' : state === 'active' ? 'bg-[#faeeda] border border-[#f5c775]' : 'bg-[#f5fcfc] border border-[#d8edf0]'
+  const dotClass = state === 'done'
+    ? 'bg-emerald-50 border border-emerald-200'
+    : state === 'active'
+    ? 'bg-amber-50 border border-amber-200'
+    : 'bg-[#f7f1f8] border border-[#b48bd0]/30'
   const Icon = state === 'done' ? Check : state === 'active' ? Clock : Package
-  const iconColor = state === 'done' ? '#0f6e56' : state === 'active' ? '#854f0b' : '#8ab0b8'
+  const iconColor = state === 'done' ? '#059669' : state === 'active' ? '#92400e' : '#b48bd0'
   return (
     <div className="flex gap-3 pb-4">
       <div className="flex flex-col items-center">
         <div className={`w-7 h-7 rounded-full flex items-center justify-center ${dotClass}`}>
           <Icon size={13} style={{ color: iconColor }} />
         </div>
-        <div className="w-px flex-1 bg-[#d8edf0] mt-1" />
+        <div className="w-px flex-1 bg-[#b48bd0]/20 mt-1" />
       </div>
       <div className="pt-1 pb-2">
-        <p className={`text-[12.5px] font-medium ${state === 'wait' ? 'text-[#8ab0b8]' : 'text-[#0d2b32]'}`}>{label}</p>
-        <p className={`text-[11px] ${state === 'active' ? 'text-[#854f0b]' : 'text-[#8ab0b8]'}`}>{sublabel}</p>
+        <p className={`text-[12.5px] font-medium ${state === 'wait' ? 'text-[#b48bd0]' : 'text-[#352a6e]'}`}>{label}</p>
+        <p className={`text-[11px] ${state === 'active' ? 'text-amber-700' : 'text-[#b48bd0]'}`}>{sublabel}</p>
       </div>
     </div>
   )
@@ -50,7 +55,7 @@ const PAYMENT_METHODS = ['Transfer bancar', 'Numerar', 'Card']
 const resetForm = {
   type: 'Cheltuială', documentType: 'Factură', supplier: '',
   cui: '',
-  category: 'Furnizori', netAmount: '', tva: '19', // Modificat la 19 standard pentru o aliniere mai ușoară cu OCR-ul românesc
+  category: 'Furnizori', netAmount: '', tva: '19',
   totalAmount: '', dueDate: '', paymentMethod: 'Transfer bancar',
   notes: '', stockItem: '', stockQuantityDelta: '', documentNumber: '',
   bankAccount: '',
@@ -70,7 +75,7 @@ export default function Tranzactii() {
   const [managerNote, setManagerNote] = useState('')
   const [showNoteInput, setShowNoteInput] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
-  const [loadingScan, setLoadingScan] = useState(false) // Stare nouă pentru procesul de scanare OCR
+  const [loadingScan, setLoadingScan] = useState(false)
   const [form, setForm] = useState(resetForm)
   const [customFields, setCustomFields] = useState(resetCustom)
 
@@ -203,48 +208,40 @@ export default function Tranzactii() {
     }
   }
 
-  // Funcția nouă care trimite documentul încărcat către endpoint-ul OCR de backend
   const handleInvoiceScan = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
-
-  const uploadData = new FormData()
-  uploadData.append('invoice', file)
-
-  setLoadingScan(true)
-  success('Se analizează structura documentului. Te rugăm să aștepți...')
-
-  try {
-    const response = await api.post('/ocr/scan', uploadData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-
-    if (response.data.success) {
-      const extracted = response.data.data
-
-      setForm(f => ({
-        ...f,
-        cui: extracted.cui || f.cui,
-        supplier: extracted.supplier || f.supplier,
-        documentNumber: extracted.documentNumber || f.documentNumber,
-        bankAccount: extracted.bankAccount || f.bankAccount,
-        issueDate: extracted.issueDate || f.issueDate,
-        netAmount: extracted.netAmount || f.netAmount,
-        tva: extracted.tva || f.tva,
-        totalAmount: extracted.totalAmount || f.totalAmount,
-      }))
-
-      success('Document scanat cu succes! Câmpurile financiare au fost completate.')
+    const file = e.target.files[0]
+    if (!file) return
+    const uploadData = new FormData()
+    uploadData.append('invoice', file)
+    setLoadingScan(true)
+    success('Se analizează structura documentului. Te rugăm să aștepți...')
+    try {
+      const response = await api.post('/ocr/scan', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      if (response.data.success) {
+        const extracted = response.data.data
+        setForm(f => ({
+          ...f,
+          cui: extracted.cui || f.cui,
+          supplier: extracted.supplier || f.supplier,
+          documentNumber: extracted.documentNumber || f.documentNumber,
+          bankAccount: extracted.bankAccount || f.bankAccount,
+          issueDate: extracted.issueDate || f.issueDate,
+          netAmount: extracted.netAmount || f.netAmount,
+          tva: extracted.tva || f.tva,
+          totalAmount: extracted.totalAmount || f.totalAmount,
+        }))
+        success('Document scanat cu succes! Câmpurile financiare au fost completate.')
+      }
+    } catch (err) {
+      toastError('Nu s-au putut extrage datele automat.')
+    } finally {
+      setLoadingScan(false)
+      e.target.value = null
     }
-  } catch (err) {
-    console.error(err)
-    toastError('Nu s-au putut extrage datele automat.')
-  } finally {
-    setLoadingScan(false)
-    e.target.value = null
   }
-}
-  // helpers pentru câmpurile cu "Altele"
+
   const isCustomDocType = !DOCUMENT_TYPES.includes(form.documentType)
   const isCustomCategory = !CATEGORIES.includes(form.category)
   const isCustomPayment = !PAYMENT_METHODS.includes(form.paymentMethod)
@@ -288,202 +285,223 @@ export default function Tranzactii() {
 
   const filterLabels = ['Toate', 'În așteptare', 'Aprobat', 'Respins']
 
+  const inputCls = "w-full px-3 py-2 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 focus:bg-white/80 text-[#352a6e] placeholder-[#b48bd0]/60 transition-all duration-150"
+  const selectCls = "w-full px-3 py-2 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 text-[#352a6e] transition-all duration-150"
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
       <Sidebar pendingCount={pendingCount} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
-        <div className="flex items-center justify-between px-7 py-5 bg-white border-b border-[#d8edf0] flex-shrink-0">
-          <div>
-            <h1 className="text-[18px] font-semibold text-[#0d2b32]" style={{ letterSpacing: '-.3px' }}>Gestiune tranzacții</h1>
-            <p className="text-[12px] text-[#6b9aa5] mt-0.5 font-light">
-              {pendingCount > 0 ? `${pendingCount} documente necesită aprobarea dvs.` : 'Toate tranzacțiile sunt procesate'}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5 bg-[#f0f8fa] border border-[#c5e0e6] rounded-lg p-1">
-              {filterLabels.map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`text-[12px] px-3 py-1.5 rounded-md font-medium transition-all ${filter === f ? 'text-white' : f === 'În așteptare' && pendingCount > 0 ? 'bg-[#faeeda] text-[#854f0b]' : 'text-[#6b9aa5]'}`}
-                  style={filter === f ? { background: 'linear-gradient(135deg,#00b8a4,#0096a0)' } : {}}>
-                  {f}{f === 'În așteptare' && pendingCount > 0 ? ` (${pendingCount})` : ''}
-                </button>
-              ))}
-            </div>
-            {!isManager && (
-              <button onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 px-4 py-2 text-white text-[12.5px] font-medium rounded-lg"
-                style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
-                <Plus size={14} /> Tranzacție nouă
-              </button>
+
+        {/* Header — Navbar with search + notifications */}
+        <Navbar
+          title="Gestiune tranzacții"
+          subtitle={pendingCount > 0 ? `${pendingCount} documente necesită aprobarea dvs.` : 'Toate tranzacțiile sunt procesate'}
+        />
+
+        {/* Filter bar + new transaction button */}
+<div className="flex items-center justify-end gap-4 px-7 pb-4 flex-shrink-0">
+  <div className="flex gap-1 bg-white/40 border border-[#b48bd0]/20 rounded-xl p-1">
+    {filterLabels.map(f => (
+      <button key={f} onClick={() => setFilter(f)}
+        className={`text-[11.5px] px-3 py-1.5 rounded-lg font-medium transition-all duration-200 ${
+          filter === f
+            ? 'bg-[#5b4ad1] text-white shadow-sm shadow-[#5b4ad1]/30'
+            : f === 'În așteptare' && pendingCount > 0
+            ? 'bg-amber-50 text-amber-700'
+            : 'text-[#b48bd0] hover:text-[#5b4ad1]'
+        }`}>
+        {f}{f === 'În așteptare' && pendingCount > 0 ? ` (${pendingCount})` : ''}
+      </button>
+    ))}
+  </div>
+  {!isManager && (
+    <button onClick={() => setShowForm(true)}
+      className="flex items-center gap-2 px-4 py-2 bg-[#5b4ad1] hover:bg-[#6a63d4] text-white text-[12px] font-medium rounded-xl shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
+      <Plus size={13} /> Tranzacție nouă
+    </button>
+  )}
+</div>
+
+        {/* Body */}
+        <div className="flex flex-1 overflow-hidden px-7 pb-6 gap-4 min-h-0">
+
+          {/* Transaction list — fixed width, scrollable */}
+          <div className="w-64 flex flex-col flex-shrink-0 overflow-hidden">
+            {loading && <div className="text-center py-8 text-[#b48bd0] text-sm">Se încarcă...</div>}
+            {!loading && transactions.length === 0 && (
+              <div className="text-center py-8 text-[#b48bd0] text-sm">Nicio tranzacție</div>
             )}
-          </div>
-        </div>
-
-        <div className="flex flex-1 overflow-hidden px-7 py-5 gap-4">
-          {/* List */}
-          <div className="w-72 flex flex-col gap-2 overflow-y-auto flex-shrink-0">
-            {loading && <div className="text-center py-8 text-[#8ab0b8] text-sm">Se încarcă...</div>}
-            {!loading && transactions.length === 0 && <div className="text-center py-8 text-[#8ab0b8] text-sm">Nicio tranzacție</div>}
-            {transactions.map(txn => {
-              const isIn = txn.type === 'Venit'
-              const isSel = selected?._id === txn._id
-              return (
-                <div key={txn._id} onClick={() => { setSelected(txn); setDeletePending(false); setManagerNote(''); setShowNoteInput(false) }}
-                  className="bg-white border rounded-xl p-3.5 cursor-pointer transition-all relative overflow-hidden"
-                  style={{ borderColor: isSel ? '#00c9b1' : '#d8edf0', boxShadow: isSel ? '0 0 0 3px rgba(0,201,177,.1)' : '' }}>
-                  {isSel && <div className="absolute top-0 left-0 bottom-0 w-[3px] rounded-r-full" style={{ background: 'linear-gradient(180deg,#00c9b1,#0096a0)' }} />}
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] text-[#8ab0b8] font-mono">{txn.reference}</span>
-                    <StatusBadge status={txn.status} />
+            <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 pr-1" style={{ scrollbarWidth: 'thin' }}>
+              {transactions.map(txn => {
+                const isIn = txn.type === 'Venit'
+                const isSel = selected?._id === txn._id
+                return (
+                  <div key={txn._id}
+                    onClick={() => { setSelected(txn); setDeletePending(false); setManagerNote(''); setShowNoteInput(false) }}
+                    className="bg-white/60 backdrop-blur-sm border rounded-xl px-3 py-2.5 cursor-pointer transition-all duration-200 relative overflow-hidden hover:bg-white/80 flex-shrink-0"
+                    style={{
+                      borderColor: isSel ? '#5b4ad1' : 'rgba(180,139,208,0.25)',
+                      boxShadow: isSel ? '0 0 0 2px rgba(91,74,209,0.15)' : '',
+                    }}>
+                    {isSel && <div className="absolute top-0 left-0 bottom-0 w-[3px] rounded-r-full bg-gradient-to-b from-[#5b4ad1] to-[#b48bd0]" />}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9.5px] text-[#b48bd0] font-mono">{txn.reference}</span>
+                      <StatusBadge status={txn.status} />
+                    </div>
+                    <p className="text-[12px] font-medium text-[#352a6e] truncate mb-0.5">{txn.supplier}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10.5px] text-[#b48bd0]">
+                        {new Date(txn.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' })}
+                      </span>
+                      <span className={`text-[12px] font-semibold ${isIn ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {isIn ? '+' : '-'}{formatRON(txn.totalAmount)}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-[13px] font-medium text-[#0d2b32] mb-1 truncate">{txn.supplier}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[#8ab0b8]">{new Date(txn.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' })}</span>
-                    <span className={`text-[13px] font-semibold ${isIn ? 'text-[#0f6e56]' : 'text-[#a32d2d]'}`}>
-                      {isIn ? '+' : '-'}{formatRON(txn.totalAmount)}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
 
-          {/* Detail */}
+          {/* Detail panel */}
           {selected ? (
-            <div className="flex-1 bg-white border border-[#d8edf0] rounded-2xl overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-[#edf5f7] flex items-start justify-between flex-shrink-0" style={{ background: 'linear-gradient(135deg,#f5fcfc,#fff)' }}>
-                <div>
-                  <h2 className="text-[17px] font-semibold text-[#0d2b32] mb-1">{selected.documentType} — {selected.supplier}</h2>
-                  <p className="text-[12px] text-[#8ab0b8]">{selected.reference} · {selected.createdBy?.firstName} {selected.createdBy?.lastName} · {formatDate(selected.createdAt)}</p>
+            <div className="flex-1 bg-white/60 backdrop-blur-xl border border-[#b48bd0]/25 rounded-2xl overflow-hidden flex flex-col min-h-0">
+
+              {/* Compact header */}
+              <div className="px-5 py-3 border-b border-[#b48bd0]/15 flex items-center justify-between flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, rgba(247,241,248,0.7), rgba(255,255,255,0.5))' }}>
+                <div className="min-w-0 flex-1 mr-3">
+                  <h2 className="text-[14px] font-semibold text-[#352a6e] truncate">{selected.documentType} — {selected.supplier}</h2>
+                  <p className="text-[11px] text-[#b48bd0]">{selected.reference} · {selected.createdBy?.firstName} {selected.createdBy?.lastName} · {formatDate(selected.createdAt)}</p>
                 </div>
                 <StatusBadge status={selected.status} />
               </div>
 
-              <div className="p-5 flex-1 overflow-y-auto">
-                <div className="grid grid-cols-4 gap-3 mb-4">
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0" style={{ scrollbarWidth: 'thin' }}>
+
+                {/* 4 KPI mini-cards in a row */}
+                <div className="grid grid-cols-4 gap-2">
                   {[
-                    { label: 'Sumă totală', value: formatRON(selected.totalAmount), big: true },
-                    { label: 'Tip document', value: selected.documentType },
+                    { label: 'Total', value: formatRON(selected.totalAmount), big: true },
+                    { label: 'Tip doc.', value: selected.documentType },
                     { label: 'Furnizor', value: selected.supplier },
                     { label: 'Categorie', value: selected.category },
                   ].map(({ label, value, big }) => (
-                    <div key={label} className="bg-[#f5fcfc] border border-[#cce8ec] rounded-xl p-3.5">
-                      <p className="text-[9.5px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">{label}</p>
-                      <p className={`font-semibold text-[#0d2b32] ${big ? 'text-[19px]' : 'text-[13px]'}`}>{value}</p>
+                    <div key={label} className="bg-white/50 border border-[#b48bd0]/20 rounded-xl px-3 py-2">
+                      <p className="text-[9px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1">{label}</p>
+                      <p className={`font-semibold text-[#352a6e] truncate ${big ? 'text-[15px]' : 'text-[12px]'}`}>{value}</p>
                     </div>
                   ))}
                 </div>
 
+                {/* Stock / note alerts */}
                 {selected.category === 'Stoc produse' && selected.stockItem && (
-                  <div className="flex gap-3 p-3.5 rounded-xl mb-4 text-[12.5px]" style={{ background: '#edf9f7', border: '1px solid #9fe1cb', color: '#0f6e56' }}>
-                    <Package size={15} className="flex-shrink-0 mt-0.5" />
-                    <p>Această tranzacție conține <strong>{selected.stockQuantityDelta} unități</strong> din stoc. La aprobare, cantitatea se actualizează automat.</p>
+                  <div className="flex gap-2 p-2.5 rounded-xl text-[11.5px] bg-emerald-50 border border-emerald-200 text-emerald-700">
+                    <Package size={13} className="flex-shrink-0 mt-0.5" />
+                    <p><strong>{selected.stockQuantityDelta} unități</strong> din stoc — se actualizează automat la aprobare.</p>
                   </div>
                 )}
 
                 {selected.managerNote && (
-                  <div className="flex gap-3 p-3.5 rounded-xl mb-4 text-[12.5px]" style={{ background: '#fdf6e3', border: '1px solid #f5c775', color: '#854f0b' }}>
-                    <MessageSquare size={15} className="flex-shrink-0 mt-0.5" />
+                  <div className="flex gap-2 p-2.5 rounded-xl text-[11.5px] bg-amber-50 border border-amber-200 text-amber-700">
+                    <MessageSquare size={13} className="flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: '#a07020' }}>Notă manager</p>
+                      <p className="text-[9.5px] font-semibold uppercase tracking-wider mb-0.5 text-amber-800">Notă manager</p>
                       <p>{selected.managerNote}</p>
                     </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-5">
+                {/* Two-column: approval steps + financial details */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[9.5px] font-semibold text-[#8ab0b8] uppercase tracking-widest mb-3">Flux de aprobare</p>
+                    <p className="text-[9px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-2">Flux aprobare</p>
                     {approvalSteps.map((step, i) => <ApprovalStep key={i} {...step} />)}
                   </div>
                   <div>
-  <p className="text-[9.5px] font-semibold text-[#8ab0b8] uppercase tracking-widest mb-3">Detalii financiare & Document</p>
-  <div className="bg-[#f5fcfc] border border-[#cce8ec] rounded-xl overflow-hidden">
-    {[
-      { label: 'Număr Document / Bon', value: selected.documentNumber || '-' },
-      { label: 'Dată Emitere Document', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
-      { label: 'Cont IBAN Furnizor', value: selected.bankAccount || '-', mono: true },
-      { label: 'Status Plată Remisă', value: selected.paymentStatus || 'Neplătit', badge: true },
-      { label: 'Sumă netă', value: formatRON(selected.netAmount) },
-      { label: `TVA (${selected.tva || 19}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
-      { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
-      { label: 'Metodă plată', value: selected.paymentMethod },
-      { label: 'Scadență Aprobare Manager', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
-    ].map(({ label, value, bold, mono, badge, alert }) => (
-      <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-[#d8edf0] last:border-0">
-        <span className="text-[12px] text-[#6b9aa5]">{label}</span>
-        {badge ? (
-          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-            value === 'Plătit' ? 'bg-[#e0f7f5] text-[#0f6e56] border-[#9fe1cb]' :
-            value === 'În curs' ? 'bg-[#faeeda] text-[#854f0b] border-[#f5c775]' :
-            'bg-[#fcebeb] text-[#a32d2d] border-[#f7c1c1]'
-          }`}>
-            {value}
-          </span>
-        ) : (
-          <span className={`text-[12.5px] ${bold ? 'font-semibold text-[#0d2b32]' : 'text-[#0d2b32]'} ${mono ? 'font-mono text-[11.5px]' : ''} ${alert ? 'text-[#854f0b] font-medium' : ''}`}>
-            {value}
-          </span>
-        )}
-      </div>
-    ))}
-  </div>
-</div>
+                    <p className="text-[9px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-2">Detalii financiare</p>
+                    <div className="bg-white/50 border border-[#b48bd0]/20 rounded-xl overflow-hidden">
+                      {[
+                        { label: 'Nr. Document', value: selected.documentNumber || '-' },
+                        { label: 'Dată emitere', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
+                        { label: 'IBAN Furnizor', value: selected.bankAccount || '-', mono: true },
+                        { label: 'Status plată', value: selected.paymentStatus || 'Neplătit', badge: true },
+                        { label: 'Sumă netă', value: formatRON(selected.netAmount) },
+                        { label: `TVA (${selected.tva || 19}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
+                        { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
+                        { label: 'Metodă plată', value: selected.paymentMethod },
+                        { label: 'Scadență', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
+                      ].map(({ label, value, bold, mono, badge, alert }) => (
+                        <div key={label} className="flex justify-between items-center px-3 py-1.5 border-b border-[#b48bd0]/10 last:border-0">
+                          <span className="text-[11px] text-[#b48bd0] flex-shrink-0 mr-2">{label}</span>
+                          {badge ? (
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                              value === 'Plătit' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              value === 'În curs' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-red-50 text-red-600 border-red-200'
+                            }`}>{value}</span>
+                          ) : (
+                            <span className={`text-[11.5px] text-right truncate max-w-[120px] ${bold ? 'font-semibold text-[#352a6e]' : 'text-[#352a6e]'} ${mono ? 'font-mono text-[10.5px]' : ''} ${alert ? 'text-amber-700 font-medium' : ''}`}>
+                              {value}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Actions - MANAGER ONLY, PENDING ONLY */}
+              {/* Actions footer — fixed at bottom */}
               {isManager && selected.status === 'În așteptare' && (
-                <div className="px-5 pb-5 border-t border-[#edf5f7] pt-4 flex-shrink-0">
+                <div className="px-4 pb-4 pt-3 border-t border-[#b48bd0]/15 flex-shrink-0">
                   {showNoteInput && (
                     <textarea value={managerNote} onChange={e => setManagerNote(e.target.value)}
-                      rows={2}
-                      placeholder="Notă pentru angajat (va fi vizibilă indiferent de decizie)..."
-                      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl mb-3 outline-none focus:border-[#00c9b1] text-[#0d2b32] resize-none" />
+                      rows={2} placeholder="Notă pentru angajat..."
+                      className="w-full px-3 py-2 text-sm border border-[#b48bd0]/30 rounded-xl mb-2.5 outline-none focus:border-[#5b4ad1]/60 text-[#352a6e] resize-none bg-white/50" />
                   )}
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <button onClick={() => setShowNoteInput(v => !v)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium border transition-colors ${showNoteInput ? 'bg-[#edf9f7] border-[#9fe1cb] text-[#0f6e56]' : 'bg-white border-[#d8edf0] text-[#6b9aa5]'}`}>
-                      <MessageSquare size={13} /> Notă
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium border transition-all duration-200 ${showNoteInput ? 'bg-[#f7f1f8] border-[#b48bd0]/40 text-[#5b4ad1]' : 'bg-white/50 border-[#b48bd0]/30 text-[#b48bd0]'}`}>
+                      <MessageSquare size={12} /> Notă
                     </button>
                     <button onClick={handleReject} disabled={actionLoading}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-[#fcebeb] border border-[#f7c1c1] text-[#a32d2d] disabled:opacity-60">
-                      <X size={13} /> Respinge
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium bg-red-50 border border-red-200 text-red-600 disabled:opacity-60 hover:bg-red-100 transition-all duration-200">
+                      <X size={12} /> Respinge
                     </button>
                     <button onClick={handleApprove} disabled={actionLoading}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-60"
-                      style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
-                      <Check size={13} /> {actionLoading ? 'Se procesează...' : 'Aprobă tranzacția'}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-white disabled:opacity-60 bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
+                      <Check size={12} /> {actionLoading ? 'Se procesează...' : 'Aprobă'}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Angajat actions — edit & delete only on own pending transactions */}
               {!isManager && selected.status !== 'Aprobat' && (
-                <div className="px-5 pb-5 border-t border-[#edf5f7] pt-4 flex-shrink-0">
+                <div className="px-4 pb-4 pt-3 border-t border-[#b48bd0]/15 flex-shrink-0">
                   {!deletePending ? (
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                       <button onClick={openEdit}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5] hover:border-[#00c9b1] transition-colors">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium bg-white/50 border border-[#b48bd0]/30 text-[#5b4ad1] hover:border-[#5b4ad1]/50 hover:bg-white/70 transition-all duration-200">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Editează
                       </button>
                       <button onClick={() => setDeletePending(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-[#fcebeb] border border-[#f7c1c1] text-[#a32d2d] hover:bg-[#f9d5d5] transition-colors">
-                        <X size={13} /> Șterge
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-all duration-200">
+                        <X size={12} /> Șterge
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <span className="text-[12.5px] text-[#0d2b32]">Ești sigur că vrei să ștergi această tranzacție?</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11.5px] text-[#352a6e] flex-1">Ștergi această tranzacție?</span>
                       <button onClick={handleDelete} disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl text-[12px] font-medium bg-[#a32d2d] text-white disabled:opacity-60">
+                        className="px-3 py-1.5 rounded-xl text-[11.5px] font-medium bg-red-600 text-white disabled:opacity-60 hover:bg-red-700 transition-all duration-200">
                         {actionLoading ? 'Se șterge...' : 'Da, șterge'}
                       </button>
                       <button onClick={() => setDeletePending(false)} disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl text-[12px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5]">
+                        className="px-3 py-1.5 rounded-xl text-[11.5px] font-medium bg-white/50 border border-[#b48bd0]/30 text-[#b48bd0]">
                         Anulează
                       </button>
                     </div>
@@ -491,196 +509,139 @@ export default function Tranzactii() {
                 </div>
               )}
 
-              {/* Info for Angajat - read only on approved */}
               {!isManager && selected.status === 'Aprobat' && (
-                <div className="px-5 pb-4 pt-3 border-t border-[#edf5f7] flex-shrink-0">
-                  <p className="text-[12px] text-[#8ab0b8] text-center">
-                    Această tranzacție a fost aprobată de manager și nu mai poate fi modificată.
+                <div className="px-4 pb-3 pt-2.5 border-t border-[#b48bd0]/15 flex-shrink-0">
+                  <p className="text-[11px] text-[#b48bd0] text-center">
+                    Tranzacție aprobată — nu mai poate fi modificată.
                   </p>
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex-1 bg-white border border-[#d8edf0] rounded-2xl flex items-center justify-center text-[#8ab0b8] text-sm">
+            <div className="flex-1 bg-white/40 backdrop-blur-sm border border-[#b48bd0]/20 rounded-2xl flex items-center justify-center text-[#b48bd0] text-sm">
               Selectează o tranzacție din lista din stânga
             </div>
           )}
         </div>
       </div>
 
-      {/* New transaction modal */}
+      {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-[#d8edf0] flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-[#0d2b32]">{editMode ? 'Editare tranzacție' : 'Tranzacție nouă'}</h3>
-              <button onClick={closeForm} className="text-[#8ab0b8] hover:text-[#0d2b32]"><X size={18} /></button>
+        <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-[#b48bd0]/20 flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-[#352a6e]">{editMode ? 'Editare tranzacție' : 'Tranzacție nouă'}</h3>
+              <button onClick={closeForm} className="text-[#b48bd0] hover:text-[#352a6e] transition-colors"><X size={18} /></button>
             </div>
             <form onSubmit={editMode ? handleUpdate : handleCreate} className="p-5 space-y-4">
-              
-              {/* OCR scan — only when creating, not editing */}
+
               {!editMode && (
-                <div className="p-4 bg-[#f5fcfc] border border-dashed border-[#9fe1cb] rounded-xl text-center">
-                  <p className="text-[12px] text-[#0d2b32] mb-2 font-medium">
-                    {loadingScan ? "Se procesează documentul..." : "Completare automată inteligentă"}
+                <div className="p-4 bg-[#f7f1f8] border border-dashed border-[#b48bd0]/40 rounded-xl text-center">
+                  <p className="text-[12px] text-[#352a6e] mb-2 font-medium">
+                    {loadingScan ? 'Se procesează documentul...' : 'Completare automată inteligentă'}
                   </p>
-                  <label className={`inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[12px] font-medium shadow-sm hover:bg-indigo-700 cursor-pointer transition-all ${loadingScan ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <label className={`inline-flex items-center gap-2 px-4 py-2 bg-[#5b4ad1] text-white rounded-xl text-[12px] font-medium shadow-sm hover:bg-[#6a63d4] cursor-pointer transition-all ${loadingScan ? 'opacity-50 pointer-events-none' : ''}`}>
                     <Camera size={14} />
                     <span>{loadingScan ? 'Procesare OCR în curs...' : 'Scanează Poză / PDF Factură'}</span>
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      className="hidden"
-                      onChange={handleInvoiceScan}
-                      disabled={loadingScan}
-                    />
+                    <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleInvoiceScan} disabled={loadingScan} />
                   </label>
-                  <p className="text-[10px] text-[#6b9aa5] mt-1.5 font-light">Sistemul va extrage automat CUI, Furnizor, Sumă și Dată</p>
+                  <p className="text-[10px] text-[#b48bd0] mt-1.5 font-light">Sistemul va extrage automat CUI, Furnizor, Sumă și Dată</p>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Tip</label>
-                  <select className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Tip</label>
+                  <select className={selectCls} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                     <option>Cheltuială</option><option>Venit</option>
                   </select>
                 </div>
-
-                {/* Tip document cu "Altele" editabil */}
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Tip document</label>
-                  <select
-                    className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={isCustomDocType ? 'Altele' : form.documentType}
-                    onChange={e => handleSelectChange('documentType', e.target.value, DOCUMENT_TYPES)}>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Tip document</label>
+                  <select className={selectCls} value={isCustomDocType ? 'Altele' : form.documentType} onChange={e => handleSelectChange('documentType', e.target.value, DOCUMENT_TYPES)}>
                     {DOCUMENT_TYPES.map(o => <option key={o}>{o}</option>)}
                     <option>Altele</option>
                   </select>
                   {isCustomDocType && (
-                    <input
-                      autoFocus
-                      className="w-full px-3 py-2 text-sm border border-[#00c9b1] rounded-xl outline-none mt-1.5 text-[#0d2b32]"
-                      placeholder="Specifică tipul documentului..."
-                      value={customFields.documentType}
-                      onChange={e => handleCustomChange('documentType', e.target.value)}
-                    />
+                    <input autoFocus className={inputCls + ' mt-1.5'} placeholder="Specifică tipul documentului..." value={customFields.documentType} onChange={e => handleCustomChange('documentType', e.target.value)} />
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Categorie</label>
-                <select
-                  className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                  value={isCustomCategory ? 'Altele' : form.category}
-                  onChange={e => handleSelectChange('category', e.target.value, CATEGORIES)}>
+                <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Categorie</label>
+                <select className={selectCls} value={isCustomCategory ? 'Altele' : form.category} onChange={e => handleSelectChange('category', e.target.value, CATEGORIES)}>
                   {CATEGORIES.map(o => <option key={o}>{o}</option>)}
                   <option>Altele</option>
                 </select>
                 {isCustomCategory && (
-                  <input
-                    autoFocus
-                    className="w-full px-3 py-2 text-sm border border-[#00c9b1] rounded-xl outline-none mt-1.5 text-[#0d2b32]"
-                    placeholder="Specifică categoria..."
-                    value={customFields.category}
-                    onChange={e => handleCustomChange('category', e.target.value)}
-                  />
+                  <input autoFocus className={inputCls + ' mt-1.5'} placeholder="Specifică categoria..." value={customFields.category} onChange={e => handleCustomChange('category', e.target.value)} />
                 )}
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Furnizor / Client</label>
-                <input required className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                  value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Ex: Electro SRL" />
+                <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Furnizor / Client</label>
+                <input required className={inputCls} value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Ex: Electro SRL" />
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">CUI</label>
-                <input
-                  className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                  value={form.cui}
-                  onChange={e => setForm(f => ({ ...f, cui: e.target.value }))}
-                  placeholder="Ex: RO12345678"
-                />
+                <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">CUI</label>
+                <input className={inputCls} value={form.cui} onChange={e => setForm(f => ({ ...f, cui: e.target.value }))} placeholder="Ex: RO12345678" />
               </div>
-              {/* ================= PASUL C: CÂMPURILE NOI ADĂUGATE AICI ================= */}
-<div className="grid grid-cols-2 gap-3">
-  <div>
-    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Număr Document</label>
-    <input 
-      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-      value={form.documentNumber} 
-      onChange={e => setForm(f => ({ ...f, documentNumber: e.target.value }))} 
-      placeholder="Ex: Seria FT nr. 42" 
-    />
-  </div>
-  <div>
-    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Data emitere</label>
-    <input 
-      type="date" 
-      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-      value={form.issueDate} 
-      onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))} 
-    />
-  </div>
-</div>
 
-<div className="grid grid-cols-2 gap-3">
-  <div>
-    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Cont IBAN</label>
-    <input 
-      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-      value={form.bankAccount} 
-      onChange={e => setForm(f => ({ ...f, bankAccount: e.target.value }))} 
-      placeholder="RO00BTRL..." 
-    />
-  </div>
-  <div>
-    <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Status plată</label>
-    <select 
-      className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-      value={form.paymentStatus} 
-      onChange={e => setForm(f => ({ ...f, paymentStatus: e.target.value }))}
-    >
-      <option>Neplătit</option>
-      <option>Plătit</option>
-      <option>În curs</option>
-    </select>
-  </div>
-</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Număr Document</label>
+                  <input className={inputCls} value={form.documentNumber} onChange={e => setForm(f => ({ ...f, documentNumber: e.target.value }))} placeholder="Ex: Seria FT nr. 42" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Data emitere</label>
+                  <input type="date" className={inputCls} value={form.issueDate} onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))} />
+                </div>
+              </div>
 
-              {/* Stock linking */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Cont IBAN</label>
+                  <input className={inputCls} value={form.bankAccount} onChange={e => setForm(f => ({ ...f, bankAccount: e.target.value }))} placeholder="RO00BTRL..." />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Status plată</label>
+                  <select className={selectCls} value={form.paymentStatus} onChange={e => setForm(f => ({ ...f, paymentStatus: e.target.value }))}>
+                    <option>Neplătit</option>
+                    <option>Plătit</option>
+                    <option>În curs</option>
+                  </select>
+                </div>
+              </div>
+
               {form.category === 'Stoc produse' && (
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl" style={{ background: '#edf9f7', border: '1px solid #9fe1cb' }}>
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                   <div>
-                    <label className="block text-[10px] font-semibold text-[#0f6e56] uppercase tracking-wider mb-1.5">Produs din stoc</label>
-                    <select className="w-full px-3 py-2 text-sm border border-[#9fe1cb] rounded-xl outline-none text-[#0d2b32] bg-white"
+                    <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Produs din stoc</label>
+                    <select className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
                       value={form.stockItem} onChange={e => setForm(f => ({ ...f, stockItem: e.target.value }))}>
                       <option value="">— Selectează —</option>
                       {stocks.map(s => <option key={s._id} value={s._id}>{s.name} (stoc: {s.quantity})</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-[#0f6e56] uppercase tracking-wider mb-1.5">Cantitate</label>
-                    <input type="number" min="1" className="w-full px-3 py-2 text-sm border border-[#9fe1cb] rounded-xl outline-none text-[#0d2b32] bg-white"
+                    <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Cantitate</label>
+                    <input type="number" min="1" className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
                       value={form.stockQuantityDelta} onChange={e => setForm(f => ({ ...f, stockQuantityDelta: e.target.value }))} placeholder="Ex: 4" />
                   </div>
-                  <p className="col-span-2 text-[11px] text-[#0f6e56]">Stocul se va actualiza automat la aprobarea managerului.</p>
+                  <p className="col-span-2 text-[11px] text-emerald-600">Stocul se va actualiza automat la aprobarea managerului.</p>
                 </div>
               )}
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Sumă netă (RON)</label>
-                  <input required type="number" step="0.01" min="0" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.netAmount} onChange={e => handleNetChange(e.target.value)} placeholder="0.00" />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Sumă netă (RON)</label>
+                  <input required type="number" step="0.01" min="0" className={inputCls} value={form.netAmount} onChange={e => handleNetChange(e.target.value)} placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">TVA (%)</label>
-                  <input type="number" min="0" max="100" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.tva}
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">TVA (%)</label>
+                  <input type="number" min="0" max="100" className={inputCls} value={form.tva}
                     onChange={e => {
                       const rate = parseFloat(e.target.value) || 0
                       const net = parseFloat(form.netAmount) || 0
@@ -688,55 +649,40 @@ export default function Tranzactii() {
                     }} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Total (RON)</label>
-                  <input readOnly type="number" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none bg-[#f5fcfc] text-[#0d2b32]"
-                    value={form.totalAmount} placeholder="0.00" />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Total (RON)</label>
+                  <input readOnly type="number" className={inputCls + ' bg-[#f7f1f8]'} value={form.totalAmount} placeholder="0.00" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Scadență aprobare</label>
-                  <input type="date" className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Scadență aprobare</label>
+                  <input type="date" className={inputCls} value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
                 </div>
-
-                {/* Metodă plată cu "Altele" editabil */}
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Metodă plată</label>
-                  <select
-                    className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32]"
-                    value={isCustomPayment ? 'Altele' : form.paymentMethod}
-                    onChange={e => handleSelectChange('paymentMethod', e.target.value, PAYMENT_METHODS)}>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Metodă plată</label>
+                  <select className={selectCls} value={isCustomPayment ? 'Altele' : form.paymentMethod} onChange={e => handleSelectChange('paymentMethod', e.target.value, PAYMENT_METHODS)}>
                     {PAYMENT_METHODS.map(o => <option key={o}>{o}</option>)}
                     <option>Altele</option>
                   </select>
                   {isCustomPayment && (
-                    <input
-                      autoFocus
-                      className="w-full px-3 py-2 text-sm border border-[#00c9b1] rounded-xl outline-none mt-1.5 text-[#0d2b32]"
-                      placeholder="Specifică metoda de plată..."
-                      value={customFields.paymentMethod}
-                      onChange={e => handleCustomChange('paymentMethod', e.target.value)}
-                    />
+                    <input autoFocus className={inputCls + ' mt-1.5'} placeholder="Specifică metoda de plată..." value={customFields.paymentMethod} onChange={e => handleCustomChange('paymentMethod', e.target.value)} />
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-1.5">Notă (opțional)</label>
-                <textarea rows={2} className="w-full px-3 py-2 text-sm border border-[#d8edf0] rounded-xl outline-none focus:border-[#00c9b1] text-[#0d2b32] resize-none"
-                  value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Detalii suplimentare..." />
+                <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Notă (opțional)</label>
+                <textarea rows={2} className={inputCls + ' resize-none'} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Detalii suplimentare..." />
               </div>
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeForm}
-                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white border border-[#d8edf0] text-[#6b9aa5]">
+                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white/60 border border-[#b48bd0]/30 text-[#b48bd0] hover:text-[#352a6e] transition-all duration-200">
                   Anulează
                 </button>
                 <button type="submit" disabled={actionLoading || loadingScan}
-                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-60"
-                  style={{ background: 'linear-gradient(135deg,#00b8a4,#0096a0)' }}>
+                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-60 bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
                   {actionLoading ? 'Se salvează...' : editMode ? 'Salvează modificările' : 'Înregistrează'}
                 </button>
               </div>

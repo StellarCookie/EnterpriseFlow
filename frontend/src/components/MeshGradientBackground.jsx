@@ -2,31 +2,22 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import React from "react";
 
 /* ------------------------------------------------------------------ */
-/*  PALETTE — from the supplied color board                             */
-/*  Change these hex values to swap the whole look in one place.       */
+/* PALETTE — Clean Corporate Blue & Purple (Light Mode)              */
 /* ------------------------------------------------------------------ */
 const COLORS = {
-  sapphire: "#5b4ad1",      // periwinkle
-  arctic: "#f3c9dc",        // light pink
-  lace: "#f7f1f8",          // canvas
-  bubblegum: "#f0a4c4",     // pastel pink
-  balletSlipper: "#b48bd0", // lavender
-  sage: "#6a63d4",          // blue-violet
-  pistachio: "#b48bd0",     // lavender
-  spruce: "#f3c9dc",        // light pink (base gradient top)
-  peacock: "#f7f1f8",       // canvas (base gradient bottom)
+  sapphire: "#5b4ad1",      // Periwinkle / Violetul original pentru contrast
+  arctic: "#dbeafe",        // Albastru deschis curat (Tailwind blue-100) în loc de roz deschis
+  lace: "#f8fafc",          // Fundal ultra-curat, slate deschis (Tailwind slate-50)
+  bubblegum: "#bae6fd",     // Sky blue deschis și fresh (Tailwind sky-200) în loc de roz pastel
+  balletSlipper: "#b48bd0", // Lavender-ul original (mov profesional)
+  sage: "#6a63d4",          // Blue-violet pentru adâncime
+  pistachio: "#a5b4fc",     // Indigo deschis fin (Tailwind indigo-300)
+  spruce: "#e0f2fe",        // Sky deschis pentru gradientul de bază
+  peacock: "#f8fafc",       // Slate deschis pentru fundal
 };
 
 /* ------------------------------------------------------------------ */
-/*  BLOBS — the glowing shapes that make up the mesh.                   */
-/*     x / y     -> base position, in % of the container               */
-/*     size      -> diameter, in vmax (scales with viewport)           */
-/*     depth     -> how strongly it reacts to the cursor.              */
-/*                  positive = drifts toward the cursor side,           */
-/*                  negative = drifts the opposite way (parallax)       */
-/*     speed/phase -> idle drifting motion, even with no input          */
-/*                                                                       */
-/*     Add, remove, or re-tune entries here to restyle the mesh.        */
+/* BLOBS — Sferelor de culoare (Păstrate exact ca în codul tău)       */
 /* ------------------------------------------------------------------ */
 const BLOBS = [
   { color: COLORS.sapphire,      x: 22, y: 26, size: 50, depth:  0.45, speed: 0.55, phase: 0.0 },
@@ -37,7 +28,7 @@ const BLOBS = [
   { color: COLORS.sage,          x: 48, y: 52, size: 36, depth:  0.55, speed: 0.60, phase: 5.0 },
 ];
 
-/* Colors used for the burst that appears on click — cycles randomly. */
+/* Culorile pentru burst-ul de la click — adaptate la noua paletă albastru-mov */
 const CLICK_COLORS = [
   COLORS.sapphire,
   COLORS.balletSlipper,
@@ -48,16 +39,6 @@ const CLICK_COLORS = [
   COLORS.lace,
 ];
 
-/* ------------------------------------------------------------------ */
-/*  MeshGradientBackground                                              */
-/*                                                                       */
-/*  Drop this once near the root of your app (App.jsx).                */
-/*  - fixed=true  -> position:fixed, covers the whole viewport,         */
-/*                   stays put while content scrolls (default).         */
-/*  - fixed=false -> position:absolute, fills the nearest positioned    */
-/*                   ancestor (use this if you want it scoped to a       */
-/*                   single page/section instead).                      */
-/* ------------------------------------------------------------------ */
 export default function MeshGradientBackground({ className = "", style = {}, fixed = true }) {
   const wrapRef = useRef(null);
   const blobRefs = useRef([]);
@@ -68,6 +49,8 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
 
   useEffect(() => {
     const node = wrapRef.current;
+    if (!node) return;
+
     const reduceMotion =
       typeof window !== "undefined" &&
       window.matchMedia &&
@@ -81,7 +64,6 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
     window.addEventListener("pointermove", handlePointer);
 
     if (reduceMotion) {
-      // Respect reduced-motion preferences: static mesh, no parallax loop.
       return () => window.removeEventListener("pointermove", handlePointer);
     }
 
@@ -91,8 +73,6 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
     const tick = (now) => {
       const t = (now - start) / 1000;
 
-      // Ease the tracked pointer toward the real pointer for a smooth,
-      // slightly "floaty" follow rather than a 1:1 snap.
       smooth.current.x += (pointer.current.x - smooth.current.x) * 0.06;
       smooth.current.y += (pointer.current.y - smooth.current.y) * 0.06;
       const dx = smooth.current.x - 0.5;
@@ -108,7 +88,6 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
         el.style.transform = `translate(${px}px, ${py}px)`;
       });
 
-      // A soft highlight that tracks the raw cursor position directly.
       if (glowRef.current) {
         glowRef.current.style.left = `${pointer.current.x * 100}%`;
         glowRef.current.style.top = `${pointer.current.y * 100}%`;
@@ -124,8 +103,8 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
     };
   }, []);
 
-  // Click/tap: drop a colored burst + expanding ring at that point.
   const handleClick = useCallback((e) => {
+    if (!wrapRef.current) return;
     const rect = wrapRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -147,7 +126,8 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
         inset: 0,
         zIndex: 0,
         overflow: "hidden",
-        background: `linear-gradient(135deg, ${COLORS.lace} 0%, ${COLORS.arctic} 55%, rgba(180,139,208,0.25) 100%)`,
+        /* Gradientul de fundal schimbat de pe roz pe nuanțe premium de albastru corporate deschis */
+        background: `linear-gradient(135deg, ${COLORS.lace} 0%, ${COLORS.spruce} 55%, rgba(180,139,208,0.2) 100%)`,
         cursor: "pointer",
         ...style,
       }}
@@ -176,16 +156,16 @@ export default function MeshGradientBackground({ className = "", style = {}, fix
             marginTop: `-${b.size / 2}vmax`,
             borderRadius: "50%",
             background: b.color,
-            filter: "blur(70px)", // increase for a softer look, lower for sharper
-            mixBlendMode: "multiply",
-            opacity: 0.4,
+            filter: "blur(70px)",
+            mixBlendMode: "multiply", // Păstrat multiply pentru fundalul deschis
+            opacity: 0.35,            // Foarte puțin redusă opacitatea pentru a da un aer mai "clean" și corporate
             willChange: "transform",
             animation: "meshFadeIn 1.4s ease-out",
           }}
         />
       ))}
 
-      {/* Soft highlight that follows the raw cursor position */}
+      {/* Soft highlight de sub cursor */}
       <div
         ref={glowRef}
         style={{
