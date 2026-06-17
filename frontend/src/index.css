@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
+@tailwind base;
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,9 +10,12 @@
   }
 
   body {
-    @apply bg-slate-100 text-slate-800 antialiased;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  }
+  font-family: 'Noto Serif', serif;
+  -webkit-font-smoothing: antialiased;
+  /* Forțăm textul de bază al aplicației să fie foarte închis și lizibil */
+  color: #1e1545; 
+  background-color: #f7f1f8; /* brand.bg */
+}
 
   ::-webkit-scrollbar {
     width: 5px;
@@ -95,4 +100,28 @@
   .stock-critic {
     @apply text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600;
   }
+ /* 1. TEXT INTERMEDIAR: Înlocuim lavanda ștearsă cu o nuanță medie, perfect vizibilă, dar mai deschisă decât fontul principal */
+.text-\[\#b48bd0\], 
+[class*="text-[#b48bd0]"] {
+  color: #75489c !important; /* Un violet mediu, elegant și foarte lizibil */
+}
+[class*="text-[#b48bd0]/"] {
+  color: #75489c !important;
+}
+
+/* 2. BORDURI ȘI CONTURURI ULTRA-TRANSPARENTE: Generate din noua nuanță medie, pentru a fi extrem de discrete */
+[class*="border-[#b48bd0]/10"], [class*="border-[#b48bd0]/15"] {
+  border-color: rgba(117, 72, 156, 0.05) !important; /* Linii de tabel abia sesizabile */
+}
+[class*="border-[#b48bd0]/20"], [class*="border-[#b48bd0]/30"] {
+  border-color: rgba(117, 72, 156, 0.1) !important;  /* Margini fine pentru carduri */
+}
+
+/* 3. FUNDALURI: Delicate și aerisite */
+[class*="bg-[#b48bd0]/20"] {
+  background-color: rgba(117, 72, 156, 0.08) !important; /* Badge-uri sau pastile cu fundal soft */
+}
+[class*="bg-[#f7f1f8]/60"] {
+  background-color: rgba(247, 241, 248, 0.4) !important;  /* Fundaluri de rânduri/tabele */
+}
 }

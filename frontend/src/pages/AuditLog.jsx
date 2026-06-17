@@ -49,11 +49,11 @@ const getDiff = (before, after) => {
 
 const DiffRow = ({ field, before, after }) => (
   <div className="flex items-start gap-2 text-[11.5px] py-1 border-b border-[#f0f8f9] last:border-0">
-    <span className="text-[#8ab0b8] w-28 shrink-0 font-medium">{field}</span>
+    <span className="text-[#b48bd0] w-28 shrink-0 font-medium">{field}</span>
     <span className="line-through text-red-400 max-w-[180px] truncate">
       {String(before ?? '—')}
     </span>
-    <span className="text-[#8ab0b8] mx-1">→</span>
+    <span className="text-[#b48bd0] mx-1">→</span>
     <span className="text-emerald-600 max-w-[180px] truncate">
       {String(after ?? '—')}
     </span>
@@ -71,7 +71,6 @@ const LogRow = ({ log }) => {
   // Logica optimizată de afișare dinamică și securizată în coloana de entitate
   const renderEntityDetails = () => {
     if (log.entity === 'User') {
-      // 1. Când este utilizator, nu apare numele lui în textul secundar
       return null;
     }
 
@@ -81,7 +80,6 @@ const LogRow = ({ log }) => {
       const before = log.changes?.before;
       const docNr  = tx?.documentNumber || after?.documentNumber || before?.documentNumber || null;
 
-      // For manager approve/reject keep the stored label; for all other actions use the transaction type
       const storedLabel = (log.entityName || '').split(/\s*—/)[0].trim();
       const isManagerAction = storedLabel === 'Aprobare' || storedLabel === 'Respingere';
       const label = isManagerAction
@@ -90,7 +88,7 @@ const LogRow = ({ log }) => {
 
       return (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[12px] font-medium text-[#0d2b32]">
+          <span className="text-[12px] font-medium text-[#352a6e]">
             {label}{docNr ? ` - ${docNr}` : ''}
           </span>
         </div>
@@ -98,15 +96,11 @@ const LogRow = ({ log }) => {
     }
 
     if (log.entity === 'Stock') {
-      // after may be nested { success, data } (old entries) or flat (new entries)
       const after  = log.changes?.after?.data || log.changes?.after;
       const before = log.changes?.before;
-      // _stockFallback is populated by the backend for old CREATE entries with no changes stored
       const fb = log._stockFallback;
 
       const name = after?.name || before?.name || fb?.name || log.entityName;
-      // quantity reflects the state AT THE TIME of the action:
-      // DELETE → what it was before; CREATE/UPDATE → what it became after
       const qty  = log.action === 'DELETE'
         ? (before?.quantity ?? null)
         : (after?.quantity  ?? null);
@@ -114,9 +108,9 @@ const LogRow = ({ log }) => {
 
       return (
         <div className="flex items-center gap-2">
-          <span className="text-[#0d2b32] font-medium">{name}</span>
+          <span className="text-[#352a6e] font-medium">{name}</span>
           {qty !== null && (
-            <span className="text-[11px] bg-[#f0f8fa] text-[#6b9aa5] font-medium px-2 py-0.5 rounded-md border border-[#d8edf0]">
+            <span className="text-[11px] bg-[#f7f1f8]/60 text-[#5b4ad1] font-medium px-2 py-0.5 rounded-md border border-[#b48bd0]/20">
               {qty} {unit}
             </span>
           )}
@@ -141,9 +135,9 @@ const LogRow = ({ log }) => {
           </span>
         </td>
 
-        {/* Entitate */}
+        {/* Entitate — MODIFICAT: Culoare font mov */}
         <td className="px-5 py-3 text-[12px]">
-          <span className="text-[#8ab0b8] mr-2 font-normal">
+          <span className="text-[#b48bd0] mr-2 font-normal">
             {ENTITY_LABELS[log.entity] || log.entity}
           </span>
           <div className="inline-block align-middle">
@@ -153,22 +147,21 @@ const LogRow = ({ log }) => {
 
         {/* Utilizator */}
         <td className="px-5 py-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-              style={{ background: 'linear-gradient(135deg,#00c9b1,#0096a0)' }}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0 bg-gradient-to-br from-[#352a6e] to-[#5b4ad1]">
               {log.userName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
-            <span className="text-[12px] text-[#0d2b32]">{log.userName}</span>
+            <span className="text-[12px] font-medium text-[#352a6e]">{log.userName}</span>
           </div>
         </td>
 
-        {/* Data */}
-        <td className="px-5 py-3 text-[12px] text-[#8ab0b8]">{fmt(log.createdAt)}</td>
+        {/* Data — MODIFICAT: Culoare font mov */}
+        <td className="px-5 py-3 text-[12px] text-[#b48bd0]">{fmt(log.createdAt)}</td>
 
         {/* Expand */}
         <td className="px-5 py-3 text-right">
           {hasDiff && (
-            <span className="text-[#8ab0b8]">
+            <span className="text-[#b48bd0]">
               {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </span>
           )}
@@ -179,7 +172,7 @@ const LogRow = ({ log }) => {
       {open && hasDiff && (
         <tr className="bg-[#f5fcfc]">
           <td colSpan={5} className="px-8 py-3">
-            <p className="text-[10px] font-semibold text-[#8ab0b8] uppercase tracking-wider mb-2">
+            <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-2">
               Modificări ({diff.length})
             </p>
             {diff.map(d => <DiffRow key={d.field} {...d} />)}
@@ -218,7 +211,6 @@ export default function AuditLogPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data  = await res.json();
-      console.log('AUDIT RESPONSE:', data);
       setLogs(data.logs || []);
       setTotal(data.total || 0);
       setPages(data.pages || 1);
@@ -304,7 +296,7 @@ export default function AuditLogPage() {
                     ))}
                   </div>
                 </div>
-                {/* Scrollable tbody — LogRow renders as <tr> inside a table, so wrap in table */}
+                {/* Scrollable tbody */}
                 <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                   <table className="w-full">
                     <tbody>

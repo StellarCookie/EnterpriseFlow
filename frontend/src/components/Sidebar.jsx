@@ -10,11 +10,11 @@ import { ClipboardList } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Tablou de bord', section: 'principal' },
-  { to: '/tranzactii', icon: Receipt, label: 'TranzacČ›ii', section: 'principal', badge: true },
+  { to: '/tranzactii', icon: Receipt, label: 'Tranzacții', section: 'principal', badge: true },
   { to: '/stocuri', icon: Package, label: 'Stocuri', section: 'principal' },
   { to: '/utilizatori', icon: Users, label: 'Utilizatori', section: 'sistem', managerOnly: true },
-  { to: '/configurare', icon: Settings, label: 'Configurare', section: 'sistem' },
   { to: '/audit', icon: ClipboardList, label: 'Audit Log', section: 'sistem', managerOnly: true },
+  { to: '/configurare', icon: Settings, label: 'Setări', section: 'sistem' },
 ]
 
 const sidebarVariants = {
@@ -73,17 +73,20 @@ export default function Sidebar({ pendingCount = 0 }) {
       <div className="absolute bottom-16 -left-12 w-40 h-40 rounded-full bg-pastelpink/30 blur-2xl pointer-events-none" />
 
       {/* Logo */}
-      <div className="px-3 py-5 border-b border-lavender/20 flex items-center flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-periwinkle to-lavender flex items-center justify-center flex-shrink-0 shadow-lg shadow-periwinkle/30">
-            <TrendingUp size={18} className="text-white" />
-          </div>
-          <motion.div variants={labelVariants} className="min-w-0 overflow-hidden">
-            <p className="text-ink font-semibold text-[15px] leading-tight tracking-tight whitespace-nowrap font-serif">EnterpriseFlow</p>
-            <p className="text-blueviolet/70 text-[9px] font-semibold tracking-[0.15em] uppercase mt-0.5 whitespace-nowrap">Financial OS</p>
-          </motion.div>
-        </div>
-      </div>
+<div className="px-3 py-5 border-b border-lavender/20 flex items-center flex-shrink-0">
+  <div className="flex items-center gap-3 min-w-0">
+    {/* MODIFICAT: Gradient mai închis și umbră profundă */}
+    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#352a6e] to-[#5b4ad1] flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#352a6e]/30">
+      <TrendingUp size={18} className="text-white" />
+    </div>
+    <motion.div variants={labelVariants} className="min-w-0 overflow-hidden">
+      {/* MODIFICAT: Textul principal în cel mai închis mov din paletă */}
+      <p className="text-[#1c1447] font-semibold text-[15px] leading-tight tracking-tight whitespace-nowrap font-serif">EnterpriseFlow</p>
+      {/* MODIFICAT: Subtitlul într-un mov mediu-închis, foarte lizibil */}
+      <p className="text-[#5b4ad1] text-[9px] font-semibold tracking-[0.15em] uppercase mt-0.5 whitespace-nowrap">SO Financiar</p>
+    </motion.div>
+  </div>
+</div>
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 overflow-y-auto overflow-x-hidden">
@@ -164,27 +167,30 @@ export default function Sidebar({ pendingCount = 0 }) {
         )}
       </nav>
 
-      {/* User card */}
-      <div className="p-2 border-t border-lavender/20 flex-shrink-0">
-        <div className="flex items-center gap-2.5 px-2.5 py-2.5 bg-white/50 border border-lavender/30 rounded-xl min-w-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-periwinkle to-lavender flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-            {initials}
-          </div>
-          <motion.div variants={labelVariants} className="flex-1 min-w-0 overflow-hidden">
-            <p className="text-ink text-xs font-semibold truncate whitespace-nowrap">
-              {user?.firstName} {user?.lastName}
-            </p>
-            <p className="text-blueviolet/70 text-[10px] truncate whitespace-nowrap">{user?.role}</p>
-          </motion.div>
-          <button
-            onClick={handleLogout}
-            title="Deconectare"
-            className="text-ink/40 hover:text-[#9d2b54] transition-colors p-1 flex-shrink-0"
-          >
-            <LogOut size={14} />
-          </button>
-        </div>
-      </div>
+     {/* User card */}
+<div className="p-2 border-t border-lavender/20 flex-shrink-0">
+  <div className="flex items-center gap-2.5 px-2.5 py-2.5 bg-white/50 border border-lavender/30 rounded-xl min-w-0">
+    {/* MODIFICAT: Cercul contului cu gradientul mai închis asortat cu logo-ul */}
+    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#352a6e] to-[#5b4ad1] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 shadow-sm">
+      {initials}
+    </div>
+    <motion.div variants={labelVariants} className="flex-1 min-w-0 overflow-hidden">
+      {/* MODIFICAT: Numele utilizatorului în mov închis */}
+      <p className="text-[#1c1447] text-xs font-semibold truncate whitespace-nowrap">
+        {user?.firstName} {user?.lastName}
+      </p>
+      {/* MODIFICAT: Rolul utilizatorului în tonul mov mediu */}
+      <p className="text-[#5b4ad1] text-[10px] truncate whitespace-nowrap">{user?.role}</p>
+    </motion.div>
+    <button
+      onClick={handleLogout}
+      title="Deconectare"
+      className="text-ink/40 hover:text-[#9d2b54] transition-colors p-1 flex-shrink-0"
+    >
+      <LogOut size={14} />
+    </button>
+  </div>
+</div>
 
       <ToggleClose collapsed={collapsed} setCollapsed={setCollapsed} />
     </motion.aside>

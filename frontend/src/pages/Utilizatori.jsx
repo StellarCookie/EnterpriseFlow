@@ -69,9 +69,10 @@ export default function Utilizatori() {
                   {users.map(u => (
                     <div key={u._id} className="grid px-5 py-2.5 border-b border-[#b48bd0]/10 hover:bg-[#f7f1f8]/40 transition-colors duration-150 items-center" style={{ gridTemplateColumns: '2fr 2fr 1fr 1fr 1fr 1.5fr' }}>
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0 bg-gradient-to-br from-[#5b4ad1] to-[#b48bd0]">
-                          {u.firstName?.[0]}{u.lastName?.[0]}
-                        </div>
+                        {/* Cercul contului din pagina Utilizatori */}
+<div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#352a6e] to-[#5b4ad1] flex items-center justify-center text-white text-xs font-semibold shadow-sm">
+  {u.firstName?.[0]}{u.lastName?.[0]}
+</div>  
                         <p className="text-[12px] font-medium text-[#352a6e] truncate">{u.firstName} {u.lastName}</p>
                       </div>
                       <p className="text-[11.5px] text-[#b48bd0] truncate pr-2">{u.email}</p>

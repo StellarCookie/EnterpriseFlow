@@ -96,12 +96,15 @@ export default function Setari() {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden" style={{ position: 'relative', zIndex: 1 }}>
-        <Navbar title="Setări cont" showSearch={false} />
+        
+        {/* MODIFICARE: Am mutat Navbar în interiorul main-ului de mai jos pentru aliniere la stânga și la dreapta cu cardurile */}
+        <main className="flex-1 overflow-y-auto px-7 pb-6 space-y-5 max-w-7xl w-full mx-auto">
+          
+          {/* Navbar se va redimensiona acum perfect după max-w-7xl */}
+          <Navbar title="Setări cont" showSearch={false} />
 
-        <main className="flex-1 overflow-y-auto px-7 pb-6 space-y-5">
-
-          {/* Profil */}
-          <section className="bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl p-6 mt-4">
+          {/* Profil — Eliminat mt-4 pentru că spațiul vine natural din space-y-5 */}
+          <section className="bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4 border-b border-[#b48bd0]/15 pb-3">
               <div className="flex items-center gap-2">
                 <User size={16} className="text-[#5b4ad1]" />
@@ -113,7 +116,7 @@ export default function Setari() {
                 {loadingTitle ? 'Se salvează...' : 'Salvează Funcția'}
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Nume complet</label>
                 <input type="text" disabled value={user ? `${user.firstName} ${user.lastName}` : 'Se încarcă...'} className={inputDisabledCls} />
@@ -142,7 +145,7 @@ export default function Setari() {
               <h2 className="text-[14px] font-semibold text-[#352a6e]">Securitate cont</h2>
             </div>
             <form onSubmit={handlePasswordUpdate} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Parola curentă</label>
                   <input type="password" placeholder="••••••••" value={passwordForm.currentPassword}
@@ -247,21 +250,23 @@ export default function Setari() {
                   <h4 className="text-[12.5px] font-semibold text-red-600">Ștergere cont</h4>
                   <p className="text-[11px] text-[#b48bd0]">Această acțiune este permanentă și ireversibilă. Contul tău va fi șters definitiv din sistem.</p>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">
-                    Scrie <span className="text-red-500 font-bold">{user ? `${user.firstName} ${user.lastName}` : '—'}</span> pentru a confirma
-                  </label>
-                  <input type="text" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)}
-                    placeholder="Numele tău complet..."
-                    className="w-full px-3 py-2 text-sm border border-red-200/60 rounded-xl outline-none focus:border-red-400 text-[#352a6e] bg-white/60 transition-all duration-150" />
-                </div>
-                <div className="flex justify-end">
-                  <button onClick={handleDeleteAccount}
-                    disabled={loadingDelete || deleteConfirm !== `${user?.firstName} ${user?.lastName}`}
-                    className="px-3 py-2 text-white text-xs font-semibold rounded-xl transition-all duration-200 flex items-center gap-1.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed">
-                    <Trash2 size={13} />
-                    {loadingDelete ? 'Se șterge...' : 'Șterge contul'}
-                  </button>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">
+                      Scrie <span className="text-red-500 font-bold">{user ? `${user.firstName} ${user.lastName}` : '—'}</span> pentru a confirma
+                    </label>
+                    <input type="text" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)}
+                      placeholder="Numele tău complet..."
+                      className="w-full px-3 py-2 text-sm border border-red-200/60 rounded-xl outline-none focus:border-red-400 text-[#352a6e] bg-white/60 transition-all duration-150" />
+                  </div>
+                  <div className="flex justify-end">
+                    <button onClick={handleDeleteAccount}
+                      disabled={loadingDelete || deleteConfirm !== `${user?.firstName} ${user?.lastName}`}
+                      className="w-full px-3 py-2 text-white text-xs font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed h-[38px]">
+                      <Trash2 size={13} />
+                      {loadingDelete ? 'Se șterge...' : 'Șterge contul'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

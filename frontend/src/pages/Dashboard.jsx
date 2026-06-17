@@ -207,8 +207,6 @@ export default function Dashboard() {
   const incomePct   = momPct(stats.monthlyIncome, prev.income || 0)
   const expensesPct = momPct(stats.monthlyExpenses, prev.expenses || 0)
 
-  const selectCls = "w-full px-3 py-2 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 text-[#352a6e] transition-all duration-150"
-
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent', position: 'relative' }}>
       <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
@@ -229,7 +227,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ── TOP 4 KPI CARDS — unchanged ── */}
+          {/* ── TOP 4 KPI CARDS ── */}
           <div className="grid grid-cols-4 gap-4 mt-4">
             <DashboardCard
               label="Sold curent" value={formatRON(stats.balance)}
@@ -282,7 +280,7 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height={148}>
                     <BarChart
                       data={fluxView === 'Lunar' ? stats.monthlyBreakdown : fluxView === 'Trim.' ? stats.quarterlyBreakdown : stats.yearlyBreakdown}
-                      barSize={fluxView === 'Anual' ? 28 : 12} barGap={3}>
+                      barSize={12} barGap={3}>
                       <CartesianGrid vertical={false} stroke="rgba(180,139,208,0.2)" />
                       <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v} />
@@ -364,15 +362,6 @@ export default function Dashboard() {
                     </button>
                   </div>
 
-                  {/* Column headers — fixed */}
-                  <div className="grid px-4 py-1.5 mx-3 mb-1 rounded-lg bg-[#f7f1f8]/70 flex-shrink-0"
-                    style={{ gridTemplateColumns: '1.4rem 1fr 6rem 5.5rem' }}>
-                    <span />
-                    <span className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider pl-2">Furnizor</span>
-                    <span className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider text-right">Sumă</span>
-                    <span className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider text-right">Status</span>
-                  </div>
-
                   {/* Scrollable rows */}
                   <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ scrollbarWidth: 'thin' }}>
                     {recentTxns.length === 0 ? (
@@ -382,7 +371,7 @@ export default function Dashboard() {
                       return (
                         <div
                           key={txn._id}
-                          onClick={() => navigate('/tranzactii')}
+                          onClick={() => navigate(`/tranzactii?q=${encodeURIComponent(txn.reference)}`)}
                           className="grid items-center px-1 py-2 rounded-lg cursor-pointer transition-all duration-150 hover:bg-white/70 hover:shadow-sm group border-b border-[#b48bd0]/10 last:border-0"
                           style={{ gridTemplateColumns: '1.4rem 1fr 6rem 5.5rem' }}
                         >
@@ -524,15 +513,14 @@ export default function Dashboard() {
               )}
             </>
           ) : (
+
             /* ── ANGAJAT SECTION ── */
-            <>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Coloana Stângă: Ore lucrate și Tranzacții recente (unul sub altul) */}
+              <div className="flex flex-col gap-4">
                 {/* Ore lucrate */}
                 <HoverCard className="p-4 flex flex-col" style={{ height: 220 }}>
-                  <CardHeader
-                    title="Ore Lucrate (Săptămânal)"
-                    action={<span className="text-[10px] bg-[#5b4ad1]/10 text-[#5b4ad1] font-semibold px-2 py-0.5 rounded-full border border-[#5b4ad1]/20">Normă Întreagă</span>}
-                  />
+                  <CardHeader title="Ore Lucrate (Săptămânal)" />
                   <ResponsiveContainer width="100%" height={126}>
                     <BarChart data={MOCK_LOGGED_TIME} barSize={22}>
                       <CartesianGrid vertical={false} stroke="rgba(180,139,208,0.2)" strokeDasharray="3 3" />
@@ -548,35 +536,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </HoverCard>
 
-                {/* Asistent AI */}
-                <HoverCard className="p-4 flex flex-col" style={{ height: 220 }}>
-                  <div className="flex items-center gap-2 mb-2.5 flex-shrink-0">
-                    <span className="w-7 h-7 flex items-center justify-center bg-gradient-to-br from-[#5b4ad1] to-[#b48bd0] rounded-lg text-white flex-shrink-0">
-                      <Bot size={14} />
-                    </span>
-                    <div>
-                      <h3 className="text-[12.5px] font-semibold text-[#352a6e]">Asistent AI Virtual</h3>
-                      <p className="text-[10px] text-[#6a63d4]/70">Suport operațional conectat la datele tale</p>
-                    </div>
-                  </div>
-                  <div className="bg-white/40 border border-[#b48bd0]/25 rounded-xl p-3 text-[11.5px] text-[#352a6e] font-light leading-relaxed flex-1 overflow-y-auto whitespace-pre-line min-h-[82px]">
-                    {aiReply}
-                  </div>
-                  <form onSubmit={handleAiSubmit} className="mt-2 flex gap-2">
-                    <input type="text" value={aiQuestion} onChange={e => setAiQuestion(e.target.value)}
-                      placeholder={loadingAi ? 'Se generează răspunsul...' : 'Pune o întrebare asistentului...'}
-                      disabled={loadingAi}
-                      className="flex-1 px-3 py-1.5 text-[11px] bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 text-[#352a6e] placeholder-[#b48bd0]/60 transition-all duration-200 disabled:opacity-60" />
-                    <button type="submit" disabled={loadingAi || !aiQuestion.trim()}
-                      className="px-3 py-1.5 bg-[#5b4ad1] hover:bg-[#6a63d4] text-[11px] font-medium text-white rounded-xl shadow-md shadow-[#5b4ad1]/25 transition-all duration-200 disabled:opacity-40 flex-shrink-0">
-                      {loadingAi ? '...' : 'Trimite'}
-                    </button>
-                  </form>
-                </HoverCard>
-              </div>
-
-              {/* Angajat bottom row */}
-              <div className="grid grid-cols-2 gap-4">
+                {/* Tranzacții recente */}
                 <HoverCard className="p-4 flex flex-col" style={{ height: 240 }}>
                   <CardHeader
                     title="Tranzacții recente"
@@ -586,7 +546,11 @@ export default function Dashboard() {
                     {recentTxns.slice(0, 4).map(txn => {
                       const isIn = txn.type === 'Venit'
                       return (
-                        <div key={txn._id} className="flex items-center gap-3 py-2">
+                        <div
+                          key={txn._id}
+                          onClick={() => navigate(`/tranzactii?q=${encodeURIComponent(txn.reference)}`)}
+                          className="flex items-center gap-3 py-2 cursor-pointer hover:bg-white/40 rounded-lg px-1 transition-all duration-150"
+                        >
                           <div className={`w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 ${isIn ? 'bg-emerald-100/60 text-emerald-700' : txn.status === 'În așteptare' ? 'bg-amber-100/60 text-amber-700' : 'bg-sky-100/60 text-sky-700'}`}>
                             {isIn ? <TrendingUp size={12} /> : txn.status === 'În așteptare' ? <Clock size={12} /> : <TrendingDown size={12} />}
                           </div>
@@ -608,14 +572,44 @@ export default function Dashboard() {
                     {recentTxns.length === 0 && <p className="text-sm text-[#b48bd0] text-center py-6">Nicio tranzacție înregistrată</p>}
                   </div>
                 </HoverCard>
+              </div>
 
-                <HoverCard className="p-4 flex flex-col" style={{ height: 240 }}>
+              {/* Coloana Dreaptă: Asistent AI și Evidența stocuri (unul lângă altul) */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Asistent AI */}
+                <HoverCard className="p-4 flex flex-col" style={{ height: 476 }}>
+                  <div className="flex items-center gap-2 mb-2.5 flex-shrink-0">
+                    <span className="w-7 h-7 flex items-center justify-center bg-gradient-to-br from-[#5b4ad1] to-[#b48bd0] rounded-lg text-white flex-shrink-0">
+                      <Bot size={14} />
+                    </span>
+                    <div>
+                      <h3 className="text-[12.5px] font-semibold text-[#352a6e]">Asistent AI Virtual</h3>
+                      <p className="text-[10px] text-[#6a63d4]/70">Suport operațional</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/40 border border-[#b48bd0]/25 rounded-xl p-3 text-[11.5px] text-[#352a6e] font-light leading-relaxed flex-1 overflow-y-auto whitespace-pre-line min-h-[82px]">
+                    {aiReply}
+                  </div>
+                  <form onSubmit={handleAiSubmit} className="mt-2 flex gap-2">
+                    <input type="text" value={aiQuestion} onChange={e => setAiQuestion(e.target.value)}
+                      placeholder={loadingAi ? 'Se generează...' : 'Pune o întrebare...'}
+                      disabled={loadingAi}
+                      className="flex-1 px-3 py-1.5 text-[11px] bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 text-[#352a6e] placeholder-[#b48bd0]/60 transition-all duration-200 disabled:opacity-60" />
+                    <button type="submit" disabled={loadingAi || !aiQuestion.trim()}
+                      className="px-3 py-1.5 bg-[#5b4ad1] hover:bg-[#6a63d4] text-[11px] font-medium text-white rounded-xl shadow-md shadow-[#5b4ad1]/25 transition-all duration-200 disabled:opacity-40 flex-shrink-0">
+                      {loadingAi ? '...' : 'Trimite'}
+                    </button>
+                  </form>
+                </HoverCard>
+
+                {/* Evidența stocuri */}
+                <HoverCard className="p-4 flex flex-col" style={{ height: 476 }}>
                   <CardHeader
                     title="Evidența stocuri"
                     action={<button onClick={() => navigate('/stocuri')} className="text-[11.5px] text-[#5b4ad1] font-medium hover:underline">Gestionează</button>}
                   />
                   <div className="space-y-2 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                    {stocks.slice(0, 5).map(s => (
+                    {stocks.slice(0, 12).map(s => (
                       <div key={s._id} className="flex items-center gap-2">
                         <p className="text-[11.5px] font-medium text-[#352a6e] flex-1 truncate">{s.name}</p>
                         <span className="text-[10px] text-[#b48bd0]">{s.quantity} {s.unit}</span>
@@ -628,7 +622,7 @@ export default function Dashboard() {
                   </div>
                 </HoverCard>
               </div>
-            </>
+            </div>
           )}
         </main>
       </div>

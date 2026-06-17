@@ -5,14 +5,18 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: '#5b4ad1',
-          accent: '#6a63d4',
-          lavender: '#b48bd0',
-          pink: '#f0a4c4',
-          'light-pink': '#f3c9dc',
+          primary: '#3a2d93',  
+          accent: '#473fa3',   
+          // Schimbat de la '#764e94' la un violet profund, mult mai închis și vizibil:
+          lavender: '#512c6d', 
+          pink: '#ba5881',     
+          'light-pink': '#de9cb9', 
           bg: '#f7f1f8',
-          ink: '#352a6e',
+          ink: '#1e1545',      
         },
+      },
+      fontFamily: {
+        sans: ['"Noto Serif"', 'serif'],
       },
     },
   },

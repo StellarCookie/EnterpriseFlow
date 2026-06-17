@@ -10,8 +10,11 @@ const {
 } = require('../controllers/authController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 const bcrypt = require('bcryptjs');
-const User = require('../models/User'); // Modelul tău de utilizator
+const User = require('../models/User'); // Modelul de utilizator
 const rateLimit = require('express-rate-limit');
+
+// CORECTURĂ: Importăm funcția auditLog din obiectul exportat
+const { auditLog } = require('../middleware/auditLogger');
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -25,13 +28,17 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
 
+// CORECTURĂ: Utilizăm funcția auditLog, specificând acțiunea și entitatea corespunzătoare
+router.post('/logout', protect, auditLog('LOGOUT', 'User'), (req, res) => {
+  return res.status(200).json({ success: true, message: 'Delogare reușită din sistem.' });
+});
+
 // ==========================================
 // RUTE PROTEJATE (Necesită doar să fii logat)
 // ==========================================
 router.get('/me', protect, getMe);
 
-// 1. Schimbare Parolă (PUT /api/auth/update-password)
-// 1. Schimbare Parolă (PUT /api/auth/update-password)
+// Schimbare Parolă (PUT /api/auth/update-password)
 router.put('/update-password', protect, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -59,7 +66,7 @@ router.put('/update-password', protect, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // CORECTURĂ CRUCIALĂ: Salvare directă prin ID pentru a evita criptarea dublă (pre-save bypass)
+    // Salvare directă prin ID pentru a evita criptarea dublă
     await User.findByIdAndUpdate(req.user._id, { password: hashedPassword });
 
     return res.status(200).json({ success: true, message: 'Parola a fost salvată în baza de date!' });

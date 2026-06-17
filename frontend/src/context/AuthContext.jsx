@@ -1,4 +1,3 @@
-// 1. Add "useContext" to your imports at the top
 import { createContext, useState, useEffect, useCallback, useContext } from 'react'
 import api from '../api'
 
@@ -41,10 +40,18 @@ export function AuthProvider({ children }) {
     return userData
   }, [])
 
-  const logout = useCallback(() => {
-    sessionStorage.removeItem('ef_token')
-    sessionStorage.removeItem('ef_user')
-    setUser(null)
+  const logout = useCallback(async () => {
+    try {
+      // Trimitem cererea către server pentru a fi salvat evenimentul în AuditLog
+      await api.post('/auth/logout')
+    } catch (err) {
+      console.error('Eroare la trimiterea delogării în audit:', err)
+    } finally {
+      // Blocul finally rulează garantat, curățând sesiunea din browser
+      sessionStorage.removeItem('ef_token')
+      sessionStorage.removeItem('ef_user')
+      setUser(null)
+    }
   }, [])
 
   const isManager = user?.role === 'Manager'
@@ -57,7 +64,6 @@ export function AuthProvider({ children }) {
   )
 }
 
-// 2. ADD THIS HOOK AT THE BOTTOM
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
