@@ -12,6 +12,7 @@ import Stocuri from './pages/Stocuri'
 import Utilizatori from './pages/Utilizatori'
 import AuditLog from './pages/AuditLog'
 import Setari from './pages/Setari'
+import ParticlesBackground from './components/ParticlesBackground'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -51,6 +52,14 @@ export default function App() {
       <BrowserRouter>
         <div style={{ position: 'relative', minHeight: '100vh', background: 'transparent' }}>
           <MeshGradientBackground />
+          <ParticlesBackground
+  colors={['#5b4ad1', '#b48bd0', '#f0a4c4', '#6a63d4', '#f3c9dc']}
+  size={3}
+  countDesktop={55}
+  countTablet={40}
+  countMobile={25}
+  zIndex={0}
+/>
           <CursorGlow />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <AnimatedRoutes />

@@ -61,16 +61,13 @@ router.put('/update-password', protect, async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Parola curentă este incorectă.' });
     }
-    if (currentPassword === newPassword) {
-  return res.status(400).json({ success: false, message: 'Parola nouă nu poate fi identică cu cea curentă.' });
-    }
 
     // Generăm hash-ul o singură dată folosind librăria stabilă bcryptjs
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     // Salvare directă prin ID pentru a evita criptarea dublă
-    await User.findByIdAndUpdate(req.user._id, { password: hashedPassword, mustChangePassword: false });
+    await User.findByIdAndUpdate(req.user._id, { password: hashedPassword });
 
     return res.status(200).json({ success: true, message: 'Parola a fost salvată în baza de date!' });
   } catch (error) {
@@ -99,6 +96,62 @@ router.delete('/me', protect, async (req, res) => {
     }
     await User.findByIdAndDelete(req.user._id);
     res.status(200).json({ success: true, message: 'Contul a fost șters.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
+// GET /api/auth/worklogs/weekly — calculates hours from LOGIN/LOGOUT audit events
+router.get('/worklogs/weekly', protect, async (req, res) => {
+  try {
+    const AuditLog = require('../models/AuditLog');
+
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+    const events = await AuditLog.find({
+      userId: req.user._id,
+      action: { $in: ['LOGIN', 'LOGOUT'] },
+      createdAt: { $gte: fourWeeksAgo }
+    }).sort({ createdAt: 1 });
+
+    // Pair LOGIN -> LOGOUT sessions
+    const sessions = [];
+    let openLogin = null;
+
+    for (const event of events) {
+      if (event.action === 'LOGIN') {
+        openLogin = event;
+      } else if (event.action === 'LOGOUT' && openLogin) {
+        const hours = (new Date(event.createdAt) - new Date(openLogin.createdAt)) / 3600000;
+        sessions.push({ date: openLogin.createdAt, hours: parseFloat(hours.toFixed(2)) });
+        openLogin = null;
+      }
+    }
+
+    // Group by ISO week number
+    const weekMap = {};
+    sessions.forEach(({ date, hours }) => {
+      const d = new Date(date);
+      const startOfYear = new Date(d.getFullYear(), 0, 1);
+      const week = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+      const key = `Săpt ${week}`;
+      weekMap[key] = parseFloat(((weekMap[key] || 0) + hours).toFixed(1));
+    });
+
+    
+      // Return last 4 weeks sorted ascending by week number
+const result = Object.entries(weekMap)
+  .map(([week, ore]) => ({ week, ore }))
+  .sort((a, b) => {
+    const numA = parseInt(a.week.replace('Săpt ', ''))
+    const numB = parseInt(b.week.replace('Săpt ', ''))
+    return numA - numB
+  })
+  .slice(-4)
+
+    res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

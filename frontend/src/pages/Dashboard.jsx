@@ -12,12 +12,12 @@ import { useStocks } from '../hooks/useStocks'
 import { useTransactions } from '../hooks/useTransactions'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import { useWorkLogs } from '../hooks/useWorkLogs'
 import api from '../api'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts'
-import { KeyRound, X } from 'lucide-react'
 
 const formatRON = (n) =>
   new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0 }).format(Math.round(n || 0)) + ' RON'
@@ -27,13 +27,6 @@ const PIE_COLORS = ['#5b4ad1', '#6a63d4', '#8fb9ff', '#8fd0ff']
 const MONTHS = [
   'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
   'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
-]
-
-const MOCK_LOGGED_TIME = [
-  { week: 'Săpt 22', ore: 40 },
-  { week: 'Săpt 23', ore: 42 },
-  { week: 'Săpt 24', ore: 38 },
-  { week: 'Săpt 25', ore: 45 },
 ]
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -78,6 +71,7 @@ export default function Dashboard() {
   const { stocks, lowStockCount } = useStocks()
   const { transactions: recentTxns } = useTransactions()
   const { isManager, user, mustChangePassword } = useAuth()
+  const { workLogs } = useWorkLogs()
   const { toasts, success, error: toastError, removeToast } = useToast()
   const navigate = useNavigate()
 
@@ -94,7 +88,6 @@ export default function Dashboard() {
   const [managerInsightLoading, setManagerInsightLoading] = useState(false)
   const [managerInsightReady, setManagerInsightReady] = useState(false)
   const [managerInsightWindowOpen, setManagerInsightWindowOpen] = useState(false)
-  const [showPasswordBanner, setShowPasswordBanner] = useState(true)
 
   const handleDownload = async () => {
     try { await downloadReport(); success('Raport descărcat cu succes!') }
@@ -189,6 +182,7 @@ export default function Dashboard() {
     }
   }
 
+  
 
   const mb = stats.monthlyBreakdown || []
   const prev = mb[mb.length - 2] || { income: 0, expenses: 0 }
@@ -214,22 +208,6 @@ export default function Dashboard() {
         <Navbar title="Tablou de bord" pendingCount={pendingCount} onDownload={isManager ? handleDownload : undefined} />
 
         <main className="flex-1 overflow-y-auto px-7 pb-6 space-y-4">
-
-          {mustChangePassword && showPasswordBanner && (
-  <div className="flex items-center gap-3 bg-[#f7f1f8] border border-[#5b4ad1]/30 rounded-2xl px-4 py-3 text-sm text-[#352a6e] mt-4">
-    <KeyRound size={15} className="text-[#5b4ad1] flex-shrink-0" />
-    <span className="flex-1">
-      Folosești o parolă temporară.{' '}
-      <button onClick={() => navigate('/configurare')} className="text-[#5b4ad1] font-semibold underline hover:text-[#6a63d4] transition-colors">
-        Schimb-o acum
-      </button>{' '}
-      pentru a-ți securiza contul.
-    </span>
-    <button onClick={() => setShowPasswordBanner(false)} className="text-[#b48bd0] hover:text-[#352a6e] transition-colors flex-shrink-0">
-      <X size={14} />
-    </button>
-  </div>
-)}
 
           {/* Low stock alert */}
           {lowStockCount > 0 && (
@@ -317,7 +295,17 @@ export default function Dashboard() {
                     })) || []}>
                       <CartesianGrid vertical={false} stroke="rgba(180,139,208,0.2)" />
                       <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000).toFixed(0) + 'k'} />
+                      <YAxis
+  tick={{ fontSize: 10, fill: '#6a63d4' }}
+  axisLine={false}
+  tickLine={false}
+  domain={[-10000, 10000]}
+  tickFormatter={v => {
+    if (v === 0) return '0'
+    if (Math.abs(v) >= 1000) return (v / 1000).toFixed(0) + 'k'
+    return Math.round(v)
+  }}
+/>
                       <Tooltip content={<CustomTooltip />} />
                       <Line type="monotone" dataKey="balance" name="Sold" stroke="#5b4ad1" strokeWidth={2.3}
                         dot={{ fill: '#5b4ad1', r: 3, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
@@ -535,13 +523,13 @@ export default function Dashboard() {
                 <HoverCard className="p-4 flex flex-col" style={{ height: 220 }}>
                   <CardHeader title="Ore Lucrate (Săptămânal)" />
                   <ResponsiveContainer width="100%" height={126}>
-                    <BarChart data={MOCK_LOGGED_TIME} barSize={22}>
+                    <BarChart data={workLogs} barSize={22}>
                       <CartesianGrid vertical={false} stroke="rgba(180,139,208,0.2)" strokeDasharray="3 3" />
                       <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} unit=" h" domain={[0, 50]} />
                       <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,139,208,0.08)' }} />
                       <Bar dataKey="ore" name="Ore Lucrate" fill="#5b4ad1" radius={[5, 5, 0, 0]}>
-                        {MOCK_LOGGED_TIME.map((entry, index) => (
+                        {workLogs.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.ore > 40 ? '#8fd0ff' : '#5b4ad1'} />
                         ))}
                       </Bar>

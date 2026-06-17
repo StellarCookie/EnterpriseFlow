@@ -379,50 +379,50 @@ export default function Tranzactii() {
               </div>
 
               {/* Scrollable content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0" style={{ scrollbarWidth: 'thin' }}>
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0" style={{ scrollbarWidth: 'thin' }}>
 
-                {/* 4 KPI mini-cards in a row */}
-                <div className="grid grid-cols-4 gap-2">
+                {/* 4 KPI cards — bigger */}
+                <div className="grid grid-cols-4 gap-3">
                   {[
-                    { label: 'Total', value: formatRON(selected.totalAmount), big: true },
-                    { label: 'Tip doc.', value: selected.documentType },
+                    { label: 'Sumă totală', value: formatRON(selected.totalAmount), big: true },
+                    { label: 'Tip document', value: selected.documentType },
                     { label: 'Furnizor', value: selected.supplier },
                     { label: 'Categorie', value: selected.category },
                   ].map(({ label, value, big }) => (
-                    <div key={label} className="bg-white/50 border border-[#b48bd0]/20 rounded-xl px-3 py-2">
-                      <p className="text-[9px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1">{label}</p>
-                      <p className={`font-semibold text-[#352a6e] truncate ${big ? 'text-[15px]' : 'text-[12px]'}`}>{value}</p>
+                    <div key={label} className="bg-white/50 border border-[#b48bd0]/20 rounded-2xl px-4 py-3.5">
+                      <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">{label}</p>
+                      <p className={`font-semibold text-[#352a6e] truncate ${big ? 'text-[18px]' : 'text-[13px]'}`}>{value}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Stock / note alerts */}
                 {selected.category === 'Stoc produse' && selected.stockItem && (
-                  <div className="flex gap-2 p-2.5 rounded-xl text-[11.5px] bg-emerald-50 border border-emerald-200 text-emerald-700">
-                    <Package size={13} className="flex-shrink-0 mt-0.5" />
-                    <p><strong>{selected.stockQuantityDelta} unități</strong> din stoc — se actualizează automat la aprobare.</p>
+                  <div className="flex gap-3 p-3.5 rounded-xl text-[12.5px] bg-emerald-50 border border-emerald-200 text-emerald-700">
+                    <Package size={15} className="flex-shrink-0 mt-0.5" />
+                    <p><strong>{selected.stockQuantityDelta} unități</strong> din stoc — cantitatea se actualizează automat la aprobare.</p>
                   </div>
                 )}
 
                 {selected.managerNote && (
-                  <div className="flex gap-2 p-2.5 rounded-xl text-[11.5px] bg-amber-50 border border-amber-200 text-amber-700">
-                    <MessageSquare size={13} className="flex-shrink-0 mt-0.5" />
+                  <div className="flex gap-3 p-3.5 rounded-xl text-[12.5px] bg-amber-50 border border-amber-200 text-amber-700">
+                    <MessageSquare size={15} className="flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-[9.5px] font-semibold uppercase tracking-wider mb-0.5 text-amber-800">Notă manager</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-0.5 text-amber-800">Notă manager</p>
                       <p>{selected.managerNote}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Two-column: approval steps + financial details */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <p className="text-[9px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-2">Flux aprobare</p>
+                    <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-3">Flux aprobare</p>
                     {approvalSteps.map((step, i) => <ApprovalStep key={i} {...step} />)}
                   </div>
                   <div>
-                    <p className="text-[9px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-2">Detalii financiare</p>
-                    <div className="bg-white/50 border border-[#b48bd0]/20 rounded-xl overflow-hidden">
+                    <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-3">Detalii financiare</p>
+                    <div className="bg-white/50 border border-[#b48bd0]/20 rounded-2xl overflow-hidden">
                       {[
                         { label: 'Nr. Document', value: selected.documentNumber || '-' },
                         { label: 'Dată emitere', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
@@ -434,16 +434,16 @@ export default function Tranzactii() {
                         { label: 'Metodă plată', value: selected.paymentMethod },
                         { label: 'Scadență', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
                       ].map(({ label, value, bold, mono, badge, alert }) => (
-                        <div key={label} className="flex justify-between items-center px-3 py-1.5 border-b border-[#b48bd0]/10 last:border-0">
-                          <span className="text-[11px] text-[#b48bd0] flex-shrink-0 mr-2">{label}</span>
+                        <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-[#b48bd0]/10 last:border-0">
+                          <span className="text-[12px] text-[#b48bd0] flex-shrink-0 mr-2">{label}</span>
                           {badge ? (
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border flex-shrink-0 ${
                               value === 'Plătit' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                               value === 'În curs' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                               'bg-red-50 text-red-600 border-red-200'
                             }`}>{value}</span>
                           ) : (
-                            <span className={`text-[11.5px] text-right truncate max-w-[120px] ${bold ? 'font-semibold text-[#352a6e]' : 'text-[#352a6e]'} ${mono ? 'font-mono text-[10.5px]' : ''} ${alert ? 'text-amber-700 font-medium' : ''}`}>
+                            <span className={`text-[12.5px] text-right truncate max-w-[140px] ${bold ? 'font-semibold text-[#352a6e]' : 'text-[#352a6e]'} ${mono ? 'font-mono text-[11px]' : ''} ${alert ? 'text-amber-700 font-medium' : ''}`}>
                               {value}
                             </span>
                           )}
@@ -527,8 +527,8 @@ export default function Tranzactii() {
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-backdrop">
-          <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-card">
+        <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-[#b48bd0]/20 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold text-[#352a6e]">{editMode ? 'Editare tranzacție' : 'Tranzacție nouă'}</h3>
               <button onClick={closeForm} className="text-[#b48bd0] hover:text-[#352a6e] transition-colors"><X size={18} /></button>

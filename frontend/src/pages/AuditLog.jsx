@@ -7,24 +7,19 @@ import Sidebar from '../components/Sidebar';
 import Navbar  from '../components/Navbar';
 import { useAuth } from '../hooks/useAuth';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
 const ACTION_CONFIG = {
-  CREATE: { label: 'Creat',      color: 'bg-emerald-100 text-emerald-700', Icon: Plus    },
-  UPDATE: { label: 'Modificat',  color: 'bg-amber-100 text-amber-700',     Icon: Edit2   },
-  DELETE: { label: 'Șters',      color: 'bg-red-100 text-red-700',         Icon: Trash2  },
-  LOGIN:  { label: 'Autentificat',color: 'bg-blue-100 text-blue-700',      Icon: LogIn   },
-  LOGOUT: { label: 'Deconectat', color: 'bg-slate-100 text-slate-600',     Icon: LogOut  },
+  CREATE: { label: 'Creat',       color: 'bg-emerald-100 text-emerald-700', Icon: Plus    },
+  UPDATE: { label: 'Modificat',   color: 'bg-amber-100 text-amber-700',     Icon: Edit2   },
+  DELETE: { label: 'Șters',       color: 'bg-red-100 text-red-700',         Icon: Trash2  },
+  LOGIN:  { label: 'Autentificat',color: 'bg-blue-100 text-blue-700',       Icon: LogIn   },
+  LOGOUT: { label: 'Deconectat',  color: 'bg-slate-100 text-slate-600',     Icon: LogOut  },
 };
 
-// CORECTAT: Înlocuit Comandă cu Document și păstrat restul conform cerinței
 const ENTITY_LABELS = {
-  Order: 'Document',
-  Invoice: 'Factură',
-  User: 'Utilizator',
-  Stock: 'Stoc',
-  Product: 'Produs'
+  Order: 'Document', Invoice: 'Factură', User: 'Utilizator', Stock: 'Stoc', Product: 'Produs'
 };
+
+const GRID = '1fr 2fr 1.5fr 1.2fr 2rem';
 
 const fmt = (iso) => {
   const d = new Date(iso);
@@ -32,11 +27,6 @@ const fmt = (iso) => {
     + ' ' + d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 };
 
-// Formatare RON utilă pentru afișarea sumei la documente
-const formatRON = (n) =>
-  new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0 }).format(Math.round(n || 0)) + ' RON';
-
-// Compară before/after și returnează câmpurile modificate
 const getDiff = (before, after) => {
   if (!before || !after) return [];
   const skip = ['_id', '__v', 'updatedAt', 'createdAt', 'password'];
@@ -45,177 +35,141 @@ const getDiff = (before, after) => {
     .map(k => ({ field: k, before: before[k], after: after[k] }));
 };
 
-// ── sub-componente ────────────────────────────────────────────────────────────
-
 const DiffRow = ({ field, before, after }) => (
-  <div className="flex items-start gap-2 text-[11.5px] py-1 border-b border-[#f0f8f9] last:border-0">
+  <div className="flex items-start gap-2 text-[11.5px] py-1 border-b border-[#b48bd0]/10 last:border-0">
     <span className="text-[#b48bd0] w-28 shrink-0 font-medium">{field}</span>
-    <span className="line-through text-red-400 max-w-[180px] truncate">
-      {String(before ?? '—')}
-    </span>
+    <span className="line-through text-red-400 max-w-[180px] truncate">{String(before ?? '—')}</span>
     <span className="text-[#b48bd0] mx-1">→</span>
-    <span className="text-emerald-600 max-w-[180px] truncate">
-      {String(after ?? '—')}
-    </span>
+    <span className="text-emerald-600 max-w-[180px] truncate">{String(after ?? '—')}</span>
   </div>
 );
 
+const renderEntityDetails = (log) => {
+  if (log.entity === 'User') return null;
+
+  if (log.entity === 'Order') {
+    const after  = log.changes?.after?.data || log.changes?.after;
+    const before = log.changes?.before;
+    const docNr  = after?.documentNumber || before?.documentNumber || null;
+    const storedLabel = (log.entityName || '').split(/\s*—/)[0].trim();
+    const isManagerAction = storedLabel === 'Aprobare' || storedLabel === 'Respingere';
+    const label = isManagerAction
+      ? storedLabel
+      : (after?.type || before?.type || storedLabel || '');
+    return (
+      <span className="text-[12px] font-medium text-[#352a6e]">
+        {label}{docNr ? ` - ${docNr}` : ''}
+      </span>
+    );
+  }
+
+  if (log.entity === 'Stock') {
+    const after  = log.changes?.after?.data || log.changes?.after;
+    const before = log.changes?.before;
+    const name = after?.name || before?.name || log.entityName;
+    const qty  = log.action === 'DELETE' ? (before?.quantity ?? null) : (after?.quantity ?? null);
+    const unit = after?.unit || before?.unit || 'buc.';
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="text-[#352a6e] font-medium">{name}</span>
+        {qty !== null && (
+          <span className="text-[11px] bg-[#f7f1f8] text-[#5b4ad1] font-medium px-2 py-0.5 rounded-md border border-[#b48bd0]/20">
+            {qty} {unit}
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  return <span className="text-[12px] text-[#352a6e]">{log.entityName}</span>;
+};
+
 const LogRow = ({ log }) => {
   const [open, setOpen] = useState(false);
-  const { isManager } = useAuth(); // Preluăm rolul pentru a decide ce detalii afișăm
-  
   const cfg  = ACTION_CONFIG[log.action] || ACTION_CONFIG.UPDATE;
   const diff = log.changes ? getDiff(log.changes.before, log.changes.after) : [];
   const hasDiff = diff.length > 0;
 
-  // Logica optimizată de afișare dinamică și securizată în coloana de entitate
-  const renderEntityDetails = () => {
-    if (log.entity === 'User') {
-      return null;
-    }
-
-    if (log.entity === 'Order') {
-      const tx     = log._txData;
-      const after  = log.changes?.after?.data || log.changes?.after;
-      const before = log.changes?.before;
-      const docNr  = tx?.documentNumber || after?.documentNumber || before?.documentNumber || null;
-
-      const storedLabel = (log.entityName || '').split(/\s*—/)[0].trim();
-      const isManagerAction = storedLabel === 'Aprobare' || storedLabel === 'Respingere';
-      const label = isManagerAction
-        ? storedLabel
-        : (tx?.type || after?.type || before?.type || storedLabel || (log.action === 'CREATE' ? 'Document nou' : ''));
-
-      return (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[12px] font-medium text-[#352a6e]">
-            {label}{docNr ? ` - ${docNr}` : ''}
-          </span>
-        </div>
-      );
-    }
-
-    if (log.entity === 'Stock') {
-      const after  = log.changes?.after?.data || log.changes?.after;
-      const before = log.changes?.before;
-      const fb = log._stockFallback;
-
-      const name = after?.name || before?.name || fb?.name || log.entityName;
-      const qty  = log.action === 'DELETE'
-        ? (before?.quantity ?? null)
-        : (after?.quantity  ?? null);
-      const unit = after?.unit || before?.unit || fb?.unit || 'buc.';
-
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-[#352a6e] font-medium">{name}</span>
-          {qty !== null && (
-            <span className="text-[11px] bg-[#f7f1f8]/60 text-[#5b4ad1] font-medium px-2 py-0.5 rounded-md border border-[#b48bd0]/20">
-              {qty} {unit}
-            </span>
-          )}
-        </div>
-      );
-    }
-
-    return log.entityName;
-  };
-
   return (
     <>
-      <tr
-        className={`border-b border-[#edf5f7] transition-colors ${hasDiff ? 'cursor-pointer hover:bg-[#f9fdfd]' : ''}`}
+      {/* Row — same grid as header */}
+      <div
+        className={`grid items-center px-5 py-2.5 border-b border-[#b48bd0]/10 transition-colors duration-150 ${hasDiff ? 'cursor-pointer hover:bg-[#f7f1f8]/40' : ''}`}
+        style={{ gridTemplateColumns: GRID }}
         onClick={() => hasDiff && setOpen(o => !o)}
       >
         {/* Acțiune */}
-        <td className="px-5 py-3">
+        <div>
           <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
-            <cfg.Icon size={11} />
-            {cfg.label}
+            <cfg.Icon size={11} />{cfg.label}
           </span>
-        </td>
+        </div>
 
-        {/* Entitate — MODIFICAT: Culoare font mov */}
-        <td className="px-5 py-3 text-[12px]">
-          <span className="text-[#b48bd0] mr-2 font-normal">
-            {ENTITY_LABELS[log.entity] || log.entity}
-          </span>
-          <div className="inline-block align-middle">
-            {renderEntityDetails()}
-          </div>
-        </td>
+        {/* Entitate */}
+        <div className="text-[12px] min-w-0 pr-2 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[#b48bd0]">{ENTITY_LABELS[log.entity] || log.entity}</span>
+          {renderEntityDetails(log)}
+        </div>
 
         {/* Utilizator */}
-        <td className="px-5 py-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0 bg-gradient-to-br from-[#352a6e] to-[#5b4ad1]">
-              {log.userName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
-            <span className="text-[12px] font-medium text-[#352a6e]">{log.userName}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0 bg-gradient-to-br from-[#352a6e] to-[#5b4ad1]">
+            {log.userName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </div>
-        </td>
+          <span className="text-[12px] text-[#352a6e] truncate">{log.userName}</span>
+        </div>
 
-        {/* Data — MODIFICAT: Culoare font mov */}
-        <td className="px-5 py-3 text-[12px] text-[#b48bd0]">{fmt(log.createdAt)}</td>
+        {/* Data */}
+        <div className="text-[12px] text-[#b48bd0]">{fmt(log.createdAt)}</div>
 
-        {/* Expand */}
-        <td className="px-5 py-3 text-right">
+        {/* Expand icon */}
+        <div className="flex justify-end">
           {hasDiff && (
             <span className="text-[#b48bd0]">
               {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </span>
           )}
-        </td>
-      </tr>
+        </div>
+      </div>
 
-      {/* Diff expandabil */}
+      {/* Diff panel */}
       {open && hasDiff && (
-        <tr className="bg-[#f5fcfc]">
-          <td colSpan={5} className="px-8 py-3">
-            <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-2">
-              Modificări ({diff.length})
-            </p>
-            {diff.map(d => <DiffRow key={d.field} {...d} />)}
-          </td>
-        </tr>
+        <div className="px-8 py-3 bg-[#f7f1f8]/50 border-b border-[#b48bd0]/10">
+          <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-2">
+            Modificări ({diff.length})
+          </p>
+          {diff.map(d => <DiffRow key={d.field} {...d} />)}
+        </div>
       )}
     </>
   );
 };
 
-// ── pagina principală ─────────────────────────────────────────────────────────
-
 export default function AuditLogPage() {
-  const [logs,       setLogs]       = useState([]);
-  const [total,      setTotal]      = useState(0);
-  const [pages,      setPages]      = useState(1);
-  const [page,       setPage]       = useState(1);
-  const [loading,    setLoading]    = useState(true);
-  const [users,      setUsers]      = useState([]);   
-  const [pendingCount, setPendingCount] = useState(0); 
+  const [logs,         setLogs]         = useState([]);
+  const [total,        setTotal]        = useState(0);
+  const [pages,        setPages]        = useState(1);
+  const [page,         setPage]         = useState(1);
+  const [loading,      setLoading]      = useState(true);
+  const [users,        setUsers]        = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [filters,      setFilters]      = useState({ entity: '', action: '', userId: '', startDate: '', endDate: '' });
 
-  const [filters, setFilters] = useState({
-    entity: '', action: '', userId: '', startDate: '', endDate: ''
-  });
-
-  const { user, isManager } = useAuth();
+  const { isManager } = useAuth();
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 50 });
       Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));
-
       const token = sessionStorage.getItem('ef_token');
-      const res   = await fetch(`/api/audit?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res   = await fetch(`/api/audit?${params}`, { headers: { Authorization: `Bearer ${token}` } });
       const data  = await res.json();
       setLogs(data.logs || []);
       setTotal(data.total || 0);
       setPages(data.pages || 1);
-    }  catch(err) {
-      console.error('AUDIT ERROR:', err);   
+    } catch (err) {
+      console.error('AUDIT ERROR:', err);
     } finally {
       setLoading(false);
     }
@@ -230,17 +184,10 @@ export default function AuditLogPage() {
       .then(r => r.json()).then(setUsers);
   }, [isManager]);
 
-  const setFilter = (key, val) => {
-    setFilters(f => ({ ...f, [key]: val }));
-    setPage(1);
-  };
+  const setFilter = (key, val) => { setFilters(f => ({ ...f, [key]: val })); setPage(1); };
+  const resetFilters = () => { setFilters({ entity: '', action: '', userId: '', startDate: '', endDate: '' }); setPage(1); };
 
-  const resetFilters = () => {
-    setFilters({ entity: '', action: '', userId: '', startDate: '', endDate: '' });
-    setPage(1);
-  };
-
-  const filterSelectCls = "text-[11.5px] border border-[#b48bd0]/30 rounded-xl px-3 py-1.5 text-[#352a6e] outline-none focus:border-[#5b4ad1]/60 bg-white/60 backdrop-blur-sm transition-all duration-150"
+  const filterSelectCls = "text-[11.5px] border border-[#b48bd0]/30 rounded-xl px-3 py-1.5 text-[#352a6e] outline-none focus:border-[#5b4ad1]/60 bg-white/60 backdrop-blur-sm transition-all duration-150";
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
@@ -251,7 +198,7 @@ export default function AuditLogPage() {
 
         <main className="flex-1 overflow-hidden flex flex-col px-7 pb-6 gap-3 min-h-0">
 
-          {/* Filters — compact, fixed height */}
+          {/* Filters */}
           <div className="bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl px-4 py-3 flex-shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
               <Filter size={13} className="text-[#b48bd0]" />
@@ -278,7 +225,7 @@ export default function AuditLogPage() {
             </div>
           </div>
 
-          {/* Table — fills remaining height, body scrolls */}
+          {/* Table */}
           <div className="flex-1 bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl overflow-hidden flex flex-col min-h-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -288,27 +235,26 @@ export default function AuditLogPage() {
               <div className="text-center py-12 text-[#b48bd0] text-[13px]">Nicio înregistrare găsită.</div>
             ) : (
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                {/* Fixed thead */}
+
+                {/* Header — fixed */}
                 <div className="flex-shrink-0 border-b border-[#b48bd0]/10">
-                  <div className="grid px-5 py-2.5 bg-[#f7f1f8]/60" style={{ gridTemplateColumns: '1fr 2fr 1.5fr 1.2fr 2rem' }}>
+                  <div className="grid px-5 py-2.5 bg-[#f7f1f8]/60" style={{ gridTemplateColumns: GRID }}>
                     {['Acțiune', 'Entitate', 'Utilizator', 'Data', ''].map(h => (
                       <span key={h} className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider">{h}</span>
                     ))}
                   </div>
                 </div>
-                {/* Scrollable tbody */}
+
+                {/* Rows — same grid, no table */}
                 <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                  <table className="w-full">
-                    <tbody>
-                      {logs.map(log => <LogRow key={log._id} log={log} />)}
-                    </tbody>
-                  </table>
+                  {logs.map(log => <LogRow key={log._id} log={log} />)}
                 </div>
+
               </div>
             )}
           </div>
 
-          {/* Pagination — fixed at bottom */}
+          {/* Pagination */}
           {pages > 1 && (
             <div className="flex justify-center gap-2 flex-shrink-0">
               {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
