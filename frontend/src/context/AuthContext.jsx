@@ -56,9 +56,10 @@ export function AuthProvider({ children }) {
 
   const isManager = user?.role === 'Manager'
   const isAngajat = user?.role === 'Angajat'
+  const mustChangePassword = user?.mustChangePassword === true
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isManager, isAngajat }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isManager, isAngajat, mustChangePassword }}>
       {children}
     </AuthContext.Provider>
   )

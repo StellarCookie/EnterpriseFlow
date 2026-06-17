@@ -1,63 +1,60 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import MeshGradientBackground from './components/MeshGradientBackground'
+import CursorGlow from './components/CursorGlow'
+import PageTransition from './components/PageTransition'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Tranzactii from './pages/Tranzactii'
 import Stocuri from './pages/Stocuri'
 import Utilizatori from './pages/Utilizatori'
 import AuditLog from './pages/AuditLog'
-import Setari from './pages/Setari';
+import Setari from './pages/Setari'
+
+function AnimatedRoutes() {
+  const location = useLocation()
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        <Route path="/dashboard" element={
+          <ProtectedRoute><PageTransition><Dashboard /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/tranzactii" element={
+          <ProtectedRoute><PageTransition><Tranzactii /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/stocuri" element={
+          <ProtectedRoute><PageTransition><Stocuri /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/utilizatori" element={
+          <ProtectedRoute requiredRole="Manager"><PageTransition><Utilizatori /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/audit" element={
+          <ProtectedRoute requiredRole="Manager"><PageTransition><AuditLog /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/configurare" element={
+          <ProtectedRoute><PageTransition><Setari /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AnimatePresence>
+  )
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <div style={{ position: 'relative', minHeight: '100vh', background: 'transparent' }}>
-
-          {/* Mesh gradient background — visible on every page, reacts to cursor + clicks */}
           <MeshGradientBackground />
-
+          <CursorGlow />
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-              <Route path="/dashboard" element={
-                <ProtectedRoute><Dashboard /></ProtectedRoute>
-              } />
-
-              <Route path="/tranzactii" element={
-                <ProtectedRoute><Tranzactii /></ProtectedRoute>
-              } />
-
-              <Route path="/stocuri" element={
-                <ProtectedRoute><Stocuri /></ProtectedRoute>
-              } />
-
-              <Route path="/utilizatori" element={
-                <ProtectedRoute requiredRole="Manager"><Utilizatori /></ProtectedRoute>
-              } />
-
-              <Route path="/audit" element={
-                <ProtectedRoute requiredRole="Manager"><AuditLog /></ProtectedRoute>
-              } />
-
-             {/* Înlocuiește vechea rută cu aceasta */}
-<Route 
-  path="/configurare" 
-  element={
-    <ProtectedRoute>
-      <Setari />
-    </ProtectedRoute>
-  } 
-/>
-
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <AnimatedRoutes />
           </div>
-
         </div>
       </BrowserRouter>
     </AuthProvider>

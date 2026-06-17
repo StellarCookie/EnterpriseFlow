@@ -125,3 +125,52 @@
   background-color: rgba(247, 241, 248, 0.4) !important;  /* Fundaluri de rânduri/tabele */
 }
 }
+
+/* ── CUSTOM CURSOR ── */
+*, *::before, *::after {
+  cursor: none !important;
+}
+
+/* ── BUTTON MICRO-INTERACTIONS ── */
+button:active:not(:disabled), [role="button"]:active {
+  transform: scale(0.97) !important;
+}
+
+/* ── INPUT FOCUS GLOW ── */
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px rgba(91, 74, 209, 0.1) !important;
+}
+
+/* ── MODAL ANIMATIONS ── */
+.modal-backdrop {
+  animation: fadeIn 0.2s ease;
+}
+.modal-card {
+  animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── PENDING BADGE PULSE ── */
+.badge-pending {
+  animation: pulse-amber 2.5s ease-in-out infinite;
+}
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50%       { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.18); }
+}
+
+/* ── SCROLLBAR PALETTE ── */
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 139, 208, 0.35) !important;
+  border-radius: 999px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(91, 74, 209, 0.45) !important;
+}

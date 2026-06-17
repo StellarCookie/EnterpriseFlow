@@ -37,14 +37,8 @@ export default function Sidebar({ pendingCount = 0 }) {
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('ef_token')}` }
-      })
-    } catch (_) {}
-    logout()
+  const handleLogout =  async () => {
+    await logout()
     navigate('/login')
   }
 

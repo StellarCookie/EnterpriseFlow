@@ -61,13 +61,16 @@ router.put('/update-password', protect, async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Parola curentă este incorectă.' });
     }
+    if (currentPassword === newPassword) {
+  return res.status(400).json({ success: false, message: 'Parola nouă nu poate fi identică cu cea curentă.' });
+    }
 
     // Generăm hash-ul o singură dată folosind librăria stabilă bcryptjs
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     // Salvare directă prin ID pentru a evita criptarea dublă
-    await User.findByIdAndUpdate(req.user._id, { password: hashedPassword });
+    await User.findByIdAndUpdate(req.user._id, { password: hashedPassword, mustChangePassword: false });
 
     return res.status(200).json({ success: true, message: 'Parola a fost salvată în baza de date!' });
   } catch (error) {

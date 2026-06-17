@@ -60,6 +60,13 @@ export default function Setari() {
       if (response.data.success) {
         success('Parola a fost schimbată cu succes în baza de date!')
         setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+         const stored = sessionStorage.getItem('ef_user')
+  if (stored) {
+    const parsed = JSON.parse(stored)
+    parsed.mustChangePassword = false
+    sessionStorage.setItem('ef_user', JSON.stringify(parsed))
+    window.location.reload()
+  }
       }
     } catch (err) {
       toastError(err.response?.data?.message || 'Eroare la actualizarea parolei.')

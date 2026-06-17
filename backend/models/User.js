@@ -36,8 +36,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    title: { type: String, default: '' } 
+    title: { type: String, default: '' },
+    mustChangePassword: { type: Boolean, default: false },
   },
+  
   { timestamps: true }
 );
 

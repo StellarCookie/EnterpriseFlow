@@ -527,8 +527,8 @@ export default function Tranzactii() {
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-backdrop">
+          <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-card">
             <div className="p-5 border-b border-[#b48bd0]/20 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold text-[#352a6e]">{editMode ? 'Editare tranzacție' : 'Tranzacție nouă'}</h3>
               <button onClick={closeForm} className="text-[#b48bd0] hover:text-[#352a6e] transition-colors"><X size={18} /></button>

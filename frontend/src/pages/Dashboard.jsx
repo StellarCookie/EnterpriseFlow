@@ -17,6 +17,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts'
+import { KeyRound, X } from 'lucide-react'
 
 const formatRON = (n) =>
   new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0 }).format(Math.round(n || 0)) + ' RON'
@@ -76,7 +77,7 @@ export default function Dashboard() {
   const { stats, loading: statsLoading, downloadReport } = useDashboard()
   const { stocks, lowStockCount } = useStocks()
   const { transactions: recentTxns } = useTransactions()
-  const { isManager, user } = useAuth()
+  const { isManager, user, mustChangePassword } = useAuth()
   const { toasts, success, error: toastError, removeToast } = useToast()
   const navigate = useNavigate()
 
@@ -89,10 +90,11 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [downloadLoading, setDownloadLoading] = useState(false)
-  const [managerInsight, setManagerInsight] = useState('Apasă pe „Generează insight-uri” pentru o analiză a indicatorilor manageriali.')
+  const [managerInsight, setManagerInsight] = useState('Apasă pe „Generează” pentru o analiză a indicatorilor manageriali.')
   const [managerInsightLoading, setManagerInsightLoading] = useState(false)
   const [managerInsightReady, setManagerInsightReady] = useState(false)
   const [managerInsightWindowOpen, setManagerInsightWindowOpen] = useState(false)
+  const [showPasswordBanner, setShowPasswordBanner] = useState(true)
 
   const handleDownload = async () => {
     try { await downloadReport(); success('Raport descărcat cu succes!') }
@@ -187,11 +189,6 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => {
-    if (!isManager || managerInsightReady || statsLoading) return
-    if (!stats) return
-    generateManagerInsight()
-  }, [isManager, managerInsightReady, statsLoading, stats, pendingCount, pieData])
 
   const mb = stats.monthlyBreakdown || []
   const prev = mb[mb.length - 2] || { income: 0, expenses: 0 }
@@ -217,6 +214,22 @@ export default function Dashboard() {
         <Navbar title="Tablou de bord" pendingCount={pendingCount} onDownload={isManager ? handleDownload : undefined} />
 
         <main className="flex-1 overflow-y-auto px-7 pb-6 space-y-4">
+
+          {mustChangePassword && showPasswordBanner && (
+  <div className="flex items-center gap-3 bg-[#f7f1f8] border border-[#5b4ad1]/30 rounded-2xl px-4 py-3 text-sm text-[#352a6e] mt-4">
+    <KeyRound size={15} className="text-[#5b4ad1] flex-shrink-0" />
+    <span className="flex-1">
+      Folosești o parolă temporară.{' '}
+      <button onClick={() => navigate('/configurare')} className="text-[#5b4ad1] font-semibold underline hover:text-[#6a63d4] transition-colors">
+        Schimb-o acum
+      </button>{' '}
+      pentru a-ți securiza contul.
+    </span>
+    <button onClick={() => setShowPasswordBanner(false)} className="text-[#b48bd0] hover:text-[#352a6e] transition-colors flex-shrink-0">
+      <X size={14} />
+    </button>
+  </div>
+)}
 
           {/* Low stock alert */}
           {lowStockCount > 0 && (
@@ -447,7 +460,7 @@ export default function Dashboard() {
                         }}
                         disabled={managerInsightLoading}
                         className="text-[10.5px] text-[#5b4ad1] font-medium hover:underline disabled:opacity-60">
-                        {managerInsightLoading ? 'Se generează...' : 'Regenerează'}
+                        {managerInsightLoading ? 'Se generează...' : 'Generează'}
                       </button>
                     </div>
                     <div className="flex-1 overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin' }}>

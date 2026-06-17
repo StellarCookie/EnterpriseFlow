@@ -18,6 +18,7 @@ const sendTokenResponse = (user, statusCode, res) => {
       lastName: user.lastName,
       email: user.email,
       role: user.role,
+      mustChangePassword: user.mustChangePassword || false,
     },
   });
 };
@@ -47,6 +48,7 @@ exports.register = async (req, res) => {
       email,
       password,
       role: 'Angajat',
+      mustChangePassword: true,
     });
 
     await logAuthEvent(user, 'REGISTER', req);

@@ -318,9 +318,7 @@ exports.getDashboardStats = async (req, res) => {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
     // Angajatul vede doar statistici pentru tranzacțiile lui
-    const baseFilter = req.user.role === 'Angajat'
-      ? { createdBy: req.user._id }
-      : {};
+    const baseFilter = {};
 
     const [incomeAgg, expenseAgg, categoryAgg, balanceAgg] = await Promise.all([
       Transaction.aggregate([
