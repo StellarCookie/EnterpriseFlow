@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
@@ -26,12 +27,26 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
+    "@babel/preset-react": "^8.0.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.19",
+    "babel-jest": "^30.4.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "vite": "^5.2.13"
+  },
+  "jest": {
+  "testEnvironment": "jsdom",
+  "setupFilesAfterFramework": ["@testing-library/jest-dom"],
+  "testTimeout": 10000
   }
+  
 }
