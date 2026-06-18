@@ -118,11 +118,42 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-transactionSchema.pre('save', function (next) {
+transactionSchema.pre('save', async function (next) {
   if (!this.reference) {
-    const ts = Date.now().toString(36).toUpperCase();
-    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-    this.reference = `TXN-${ts}-${rand}`;
+    try {
+      // Preluăm dinamic modelul User pentru a nu face require circular la începutul fișierului
+      const User = mongoose.model('User');
+      const user = await User.findById(this.createdBy);
+      
+      let initials = 'US'; // Cod implicit dacă nu găsește utilizatorul
+      if (user && user.firstName && user.lastName) {
+        // Extragem prima literă din prenume și prima din nume
+        initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
+      }
+
+      // Căutăm ultima tranzacție salvată în baza de date pentru a vedea numărul secvențial
+      const lastTransaction = await this.constructor.findOne({}, { reference: 1 })
+        .sort({ createdAt: -1 });
+
+      let nextNumber = 1;
+      if (lastTransaction && lastTransaction.reference) {
+        // Luăm ultima bucată din cod (care conține numărul, de ex: "0004")
+        const parts = lastTransaction.reference.split('-');
+        const lastNum = parseInt(parts[parts.length - 1], 10);
+        
+        if (!isNaN(lastNum)) {
+          nextNumber = lastNum + 1;
+        }
+      }
+
+      // Formatăm numărul cu 4 cifre (ex: 1 devine 0001, 12 devine 0012)
+      const formattedNumber = String(nextNumber).padStart(4, '0');
+      
+      // Construim ID-ul final: ex. TXN-AN-0001, TXN-AN-0002 etc.
+      this.reference = `TXN-${initials}-${formattedNumber}`;
+    } catch (error) {
+      return next(error);
+    }
   }
   next();
 });

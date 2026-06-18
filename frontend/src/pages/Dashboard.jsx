@@ -384,7 +384,7 @@ export default function Dashboard() {
                             <p className="text-[10px] text-[#b48bd0] font-mono">{txn.reference}</p>
                           </div>
                           <p className={`text-[11.5px] font-semibold text-right pr-2 ${isIn ? 'text-emerald-700' : 'text-sky-700'}`}>
-                            {isIn ? '+' : '-'}{new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0 }).format(Math.round(txn.totalAmount || 0))}
+                            {isIn ? '+' : '-'}{formatRON(txn.totalAmount)}
                           </p>
                           <div className="text-right">
                             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${txn.status === 'Aprobat' ? 'bg-emerald-100/70 text-emerald-700' : txn.status === 'Respins' ? 'bg-sky-100/70 text-sky-700' : 'bg-amber-100/70 text-amber-700'}`}>

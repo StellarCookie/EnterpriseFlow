@@ -22,11 +22,35 @@ export default function Stocuri() {
   const [form, setForm] = useState({ name: '', sku: '', quantity: '', minQuantity: '2', unit: 'buc.', unitPrice: '', category: '' })
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
+  
+  // Stare locală pentru avertizarea de SKU duplicat
+  const [skuError, setSkuError] = useState('')
 
   useEffect(() => {
     const q = searchParams.get('q')
     if (q) { setSearch(q); setSearchParams({}, { replace: true }) }
   }, [searchParams, setSearchParams])
+
+  // Verificare duplicat în timp real bazată pe textul introdus
+  useEffect(() => {
+    if (!form.sku.trim()) {
+      setSkuError('')
+      return
+    }
+    const cleanFormSku = form.sku.toUpperCase().replace(/\s/g, '')
+    
+    const isDuplicated = stocks.some(s => 
+      s.sku?.toUpperCase().replace(/\s/g, '') === cleanFormSku && 
+      s._id !== editItem?._id
+    )
+
+    if (isDuplicated) {
+      const match = stocks.find(s => s.sku?.toUpperCase().replace(/\s/g, '') === cleanFormSku)
+      setSkuError(`Acest SKU este deja alocat produsului „${match?.name}”.`)
+    } else {
+      setSkuError('')
+    }
+  }, [form.sku, stocks, editItem])
 
   const filteredStocks = search.trim()
     ? stocks.filter(s => [s.name, s.sku, s.category].some(f => f?.toLowerCase().includes(search.trim().toLowerCase())))
@@ -34,18 +58,21 @@ export default function Stocuri() {
 
   const openCreate = () => {
     setEditItem(null)
+    setSkuError('')
     setForm({ name: '', sku: '', quantity: '', minQuantity: '2', unit: 'buc.', unitPrice: '', category: '' })
     setShowForm(true)
   }
 
   const openEdit = (item) => {
     setEditItem(item)
+    setSkuError('')
     setForm({ name: item.name, sku: item.sku || '', quantity: item.quantity, minQuantity: item.minQuantity, unit: item.unit, unitPrice: item.unitPrice || '', category: item.category || '' })
     setShowForm(true)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (skuError) return // Protecție suplimentară la trimitere
     try {
       if (editItem) { await update(editItem._id, form); success('Produs actualizat cu succes.') }
       else { await create(form); success('Produs adăugat în nomenclator.') }
@@ -71,7 +98,6 @@ export default function Stocuri() {
         />
 
         <main className="flex-1 overflow-hidden flex flex-col px-7 pb-6 min-h-0">
-
           {/* Alerts + actions row */}
           <div className="flex items-center gap-3 mb-3 flex-shrink-0 flex-wrap">
             {lowStockCount > 0 && (
@@ -103,7 +129,7 @@ export default function Stocuri() {
             </div>
           </div>
 
-          {/* Table card — fills remaining height, scrollable body */}
+          {/* Table card */}
           <div className="flex-1 bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl overflow-hidden flex flex-col min-h-0">
             <div className="px-5 py-3 border-b border-[#b48bd0]/15 flex items-center justify-between flex-shrink-0">
               <h3 className="text-[13px] font-semibold text-[#352a6e]">Nomenclator produse</h3>
@@ -129,7 +155,6 @@ export default function Stocuri() {
               </div>
             ) : (
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                {/* Fixed header */}
                 <div className="flex-shrink-0 border-b border-[#b48bd0]/10">
                   <div className="grid px-5 py-2.5 bg-[#f7f1f8]/60" style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1fr 1fr auto' }}>
                     {['Produs', 'SKU', 'Cantitate', 'Preț unitar', 'Actualizat la', isManager ? '' : 'Acțiuni'].map((h, i) => (
@@ -137,7 +162,6 @@ export default function Stocuri() {
                     ))}
                   </div>
                 </div>
-                {/* Scrollable rows */}
                 <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                   {filteredStocks.map(s => (
                     <div key={s._id} className="grid px-5 py-2.5 border-b border-[#b48bd0]/10 hover:bg-[#f7f1f8]/40 transition-colors duration-150 items-center" style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1fr 1fr auto' }}>
@@ -150,7 +174,7 @@ export default function Stocuri() {
                       <div className="text-center text-[11.5px] text-[#b48bd0]">
                         {s.unitPrice ? `${Number(s.unitPrice).toLocaleString('ro-RO')} RON` : '—'}
                       </div>
-                      <div className="text-center text-[11.5px] text-[#b48bd0]">{formatDate(s.createdAt)}</div>
+                      <div className="text-center text-[11.5px] text-[#b48bd0]">{formatDate(s.updatedAt)}</div>
                       {!isManager && (
                         <div className="flex items-center justify-center gap-1">
                           <button onClick={() => openEdit(s)} className="p-1.5 text-[#b48bd0] hover:text-[#5b4ad1] hover:bg-[#f7f1f8] rounded-lg transition-all duration-150"><Edit2 size={12} /></button>
@@ -179,9 +203,16 @@ export default function Stocuri() {
                 <input required className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Laptop Dell XPS 15" />
               </div>
               <div className="grid grid-cols-2 gap-3">
+                {/* Câmpul SKU cu transformare în timp real și alertă roșie sub el */}
                 <div>
                   <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">SKU</label>
-                  <input className={inputCls} value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="Ex: DLX15" />
+                  <input 
+                    className={`${inputCls} ${skuError ? 'border-red-500 focus:border-red-500 bg-red-50/30' : ''}`} 
+                    value={form.sku} 
+                    onChange={e => setForm(f => ({ ...f, sku: e.target.value.toUpperCase().replace(/\s/g, '') }))} 
+                    placeholder="Ex: DLX15" 
+                  />
+                  {skuError && <p className="text-red-500 text-[10.5px] mt-1 font-medium leading-tight">{skuError}</p>}
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Categorie</label>
@@ -190,7 +221,7 @@ export default function Stocuri() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Cantitate</label>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Cantitate inițială</label>
                   <input required type="number" min="0" className={inputCls} value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
                 </div>
                 <div>
@@ -204,7 +235,12 @@ export default function Stocuri() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white/60 border border-[#b48bd0]/30 text-[#b48bd0] hover:text-[#352a6e] transition-all duration-200">Anulează</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
+                {/* Butonul devine blocat (disabled) dacă există o eroare pe SKU */}
+                <button 
+                  type="submit" 
+                  disabled={!!skuError}
+                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   {editItem ? 'Salvează' : 'Adaugă produs'}
                 </button>
               </div>

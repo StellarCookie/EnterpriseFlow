@@ -24,7 +24,6 @@ exports.getStock = async (req, res) => {
 };
 
 // POST /api/stocks — doar Angajat (și Manager pentru flexibilitate)
-// Angajatul adaugă produse noi în nomenclator
 exports.createStock = async (req, res) => {
   try {
     const { name, sku, quantity, minQuantity, unit, unitPrice, category } = req.body;
@@ -33,9 +32,21 @@ exports.createStock = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Denumirea produsului este obligatorie.' });
     }
 
+    // Curățare și validare SKU Unic la adăugare
+    const cleanSku = sku ? sku.toUpperCase().replace(/\s/g, '').trim() : '';
+    if (cleanSku) {
+      const existingSku = await Stock.findOne({ sku: cleanSku });
+      if (existingSku) {
+        return res.status(400).json({
+          success: false,
+          message: `Codul SKU "${cleanSku}" este deja alocat produsului "${existingSku.name}".`,
+        });
+      }
+    }
+
     const stock = await Stock.create({
       name,
-      sku: sku?.toUpperCase(),
+      sku: cleanSku || null,
       quantity: parseInt(quantity) || 0,
       minQuantity: parseInt(minQuantity) || 2,
       unit: unit || 'buc.',
@@ -51,29 +62,40 @@ exports.createStock = async (req, res) => {
 };
 
 // PATCH /api/stocks/:id — doar Angajat
-// Angajatul poate ajusta manual cantitățile (inventar fizic, produse deteriorate etc.)
 exports.updateStock = async (req, res) => {
   try {
     const { name, sku, quantity, minQuantity, unit, unitPrice, category } = req.body;
 
-    const stock = await Stock.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...(name && { name }),
-        ...(sku && { sku: sku.toUpperCase() }),
-        ...(quantity !== undefined && { quantity: parseInt(quantity) }),
-        ...(minQuantity !== undefined && { minQuantity: parseInt(minQuantity) }),
-        ...(unit && { unit }),
-        ...(unitPrice !== undefined && { unitPrice: parseFloat(unitPrice) }),
-        ...(category !== undefined && { category }),
-      },
-      { new: true, runValidators: true }
-    );
-
+    const stock = await Stock.findById(req.params.id);
     if (!stock) {
       return res.status(404).json({ success: false, message: 'Produsul nu a fost găsit.' });
     }
 
+    // Validare SKU Unic la editare (excluzând produsul curent prin ID)
+    if (sku !== undefined) {
+      const cleanSku = sku.toUpperCase().replace(/\s/g, '').trim();
+      if (cleanSku) {
+        const existingSku = await Stock.findOne({ sku: cleanSku, _id: { $ne: req.params.id } });
+        if (existingSku) {
+          return res.status(400).json({
+            success: false,
+            message: `Codul SKU "${cleanSku}" este deja utilizat de un alt produs ("${existingSku.name}").`,
+          });
+        }
+        stock.sku = cleanSku;
+      } else {
+        stock.sku = null;
+      }
+    }
+
+    if (name) stock.name = name;
+    if (quantity !== undefined) stock.quantity = parseInt(quantity);
+    if (minQuantity !== undefined) stock.minQuantity = parseInt(minQuantity);
+    if (unit) stock.unit = unit;
+    if (unitPrice !== undefined) stock.unitPrice = parseFloat(unitPrice);
+    if (category !== undefined) stock.category = category;
+
+    await stock.save();
     res.status(200).json({ success: true, data: stock });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

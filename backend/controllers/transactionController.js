@@ -6,11 +6,63 @@ const Stock = require('../models/Stock');
 exports.createTransaction = async (req, res) => {
   try {
     const {
-      type, documentType, supplier, category,
+      type, documentType, supplier, cui, category,
       netAmount, tva, totalAmount,
       dueDate, paymentMethod, notes,
       stockItem, stockQuantityDelta, documentNumber, bankAccount, issueDate, paymentStatus
     } = req.body;
+
+    // Curățarea și formatarea strictă a datelor primite din interfață
+    const cleanSupplier = supplier ? supplier.trim() : '';
+    const cleanCui = cui ? cui.toUpperCase().replace(/\s/g, '').trim() : '';
+    const cleanBankAccount = bankAccount ? bankAccount.toUpperCase().replace(/\s/g, '').trim() : '';
+    const cleanDocNumber = documentNumber ? documentNumber.trim() : '';
+
+    // 1. PREVENIRE DUPLICARE FACTURĂ EXACTĂ (Număr + Furnizor)
+    if (cleanDocNumber && cleanSupplier) {
+      const existingInvoice = await Transaction.findOne({
+        supplier: { $regex: new RegExp(`^${cleanSupplier}$`, 'i') },
+        documentNumber: cleanDocNumber
+      });
+      if (existingInvoice) {
+        return res.status(400).json({
+          success: false,
+          message: `Factura cu numărul "${cleanDocNumber}" de la furnizorul "${cleanSupplier}" este deja înregistrată în sistem.`,
+        });
+      }
+    }
+
+    // 2. EMITERE ALERTĂ CONSISTENȚĂ CUI: Un CUI unic poate aparține unui singur partener stabil
+    if (cleanCui && cleanSupplier) {
+      const partnerWithSameCui = await Transaction.findOne({
+        cui: cleanCui,
+        supplier: { $regex: new RegExp(`^${cleanSupplier}$`, 'i') }
+      });
+      
+      if (!partnerWithSameCui) {
+        const exactCuiOwner = await Transaction.findOne({ cui: cleanCui });
+        if (exactCuiOwner) {
+          return res.status(400).json({
+            success: false,
+            message: `Atenție! CUI-ul "${cleanCui}" este deja înregistrat pentru partenerul „${exactCuiOwner.supplier}”. Folosește exact aceeași denumire pentru a evita dublarea entităților în rapoarte.`,
+          });
+        }
+      }
+    }
+
+    // 3. RECUNOAȘTERE ȘI PROTECȚIE CONT IBAN: Împiedică alocarea aceluiași cont bancar la firme cu CUI diferit
+    if (cleanBankAccount && cleanCui) {
+      const ibanWithDifferentCui = await Transaction.findOne({
+        bankAccount: cleanBankAccount,
+        cui: { $ne: cleanCui }
+      });
+      if (ibanWithDifferentCui) {
+        return res.status(400).json({
+          success: false,
+          message: `Alertă de securitate: Contul IBAN introdus aparține deja partenerului „${ibanWithDifferentCui.supplier}” (CUI: ${ibanWithDifferentCui.cui}).`,
+        });
+      }
+    }
 
     // Validare: dacă e Stoc produse, trebuie să aibă un item și cantitate
     if (category === 'Stoc produse') {
@@ -39,7 +91,8 @@ exports.createTransaction = async (req, res) => {
     const transaction = await Transaction.create({
       type,
       documentType,
-      supplier,
+      supplier: cleanSupplier,
+      cui: cleanCui || null,
       category,
       netAmount: parseFloat(netAmount),
       tva: parseFloat(tva) || 0,
@@ -51,11 +104,10 @@ exports.createTransaction = async (req, res) => {
       stockQuantityDelta: category === 'Stoc produse' ? parseInt(stockQuantityDelta) : 0,
       createdBy: req.user._id,
       status: 'În așteptare',
-      documentNumber: documentNumber || '',
-      bankAccount: bankAccount || '',
+      documentNumber: cleanDocNumber,
+      bankAccount: cleanBankAccount,
       issueDate: issueDate || undefined,
       paymentStatus: paymentStatus || 'Neplătit'
-      // IMPORTANT: la creare nu se modifică nimic în sold sau stoc
     });
 
     await transaction.populate('createdBy', 'firstName lastName email role');
@@ -83,8 +135,6 @@ exports.getTransactions = async (req, res) => {
     if (status) filter.status = status;
     if (type) filter.type = type;
     if (category) filter.category = category;
-    
-
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [transactions, total] = await Promise.all([
@@ -137,7 +187,6 @@ exports.getTransaction = async (req, res) => {
 };
 
 // PATCH /api/transactions/:id/approve — DOAR Manager
-// AUTOMATIZARE CRITICĂ: aprobarea declanșează actualizarea soldului ȘI a stocului
 exports.approveTransaction = async (req, res) => {
   try {
     const { managerNote } = req.body;
@@ -154,9 +203,6 @@ exports.approveTransaction = async (req, res) => {
       });
     }
 
-    // AUTOMATIZARE STOC: se execută DOAR la aprobare
-    // Angajatul a specificat produsul și cantitatea la creare
-    // Acum sistemul aplică modificarea
     if (
       transaction.category === 'Stoc produse' &&
       transaction.stockItem &&
@@ -165,28 +211,24 @@ exports.approveTransaction = async (req, res) => {
       const stock = await Stock.findById(transaction.stockItem._id);
       if (stock) {
         if (transaction.type === 'Cheltuială') {
-          // Cheltuială = cumpărăm marfă = stocul CREȘTE
           stock.quantity = stock.quantity + transaction.stockQuantityDelta;
         } else {
-          // Venit = vindem marfă = stocul SCADE
-          // FIXED
-if (transaction.type === 'Venit') {
-  if (stock.quantity < transaction.stockQuantityDelta) {
-    return res.status(400).json({
-      success: false,
-      message: `Stoc insuficient. Disponibil: ${stock.quantity}, necesar: ${transaction.stockQuantityDelta}.`,
-    });
-  }
-  stock.quantity -= transaction.stockQuantityDelta;
-} else {
-  stock.quantity += transaction.stockQuantityDelta;
-}
+          if (transaction.type === 'Venit') {
+            if (stock.quantity < transaction.stockQuantityDelta) {
+              return res.status(400).json({
+                success: false,
+                message: `Stoc insuficient. Disponibil: ${stock.quantity}, necesar: ${transaction.stockQuantityDelta}.`,
+              });
+            }
+            stock.quantity -= transaction.stockQuantityDelta;
+          } else {
+            stock.quantity += transaction.stockQuantityDelta;
+          }
         }
         await stock.save();
       }
     }
 
-    // Aprobăm tranzacția
     transaction.status = 'Aprobat';
     transaction.approvedBy = req.user._id;
     transaction.approvedAt = new Date();
@@ -222,7 +264,6 @@ exports.rejectTransaction = async (req, res) => {
       });
     }
 
-    // La respingere NU se modifică nimic în stoc sau sold
     transaction.status = 'Respins';
     transaction.approvedBy = req.user._id;
     transaction.approvedAt = new Date();
@@ -255,10 +296,69 @@ exports.updateTransaction = async (req, res) => {
     const allowed = ['type', 'documentType', 'documentNumber', 'supplier', 'cui', 'category',
       'netAmount', 'tva', 'totalAmount', 'dueDate', 'paymentMethod', 'notes',
       'stockItem', 'stockQuantityDelta', 'bankAccount', 'issueDate', 'paymentStatus'];
+    
     if (req.body.stockItem === '') req.body.stockItem = null;
+
+    // Curățarea și formatarea datelor în timp real la update
+    if (req.body.cui !== undefined) req.body.cui = req.body.cui.toUpperCase().replace(/\s/g, '').trim();
+    if (req.body.bankAccount !== undefined) req.body.bankAccount = req.body.bankAccount.toUpperCase().replace(/\s/g, '').trim();
+    if (req.body.supplier !== undefined) req.body.supplier = req.body.supplier.trim();
+    if (req.body.documentNumber !== undefined) req.body.documentNumber = req.body.documentNumber.trim();
+
+    const targetSupplier = req.body.supplier !== undefined ? req.body.supplier : txn.supplier;
+    const targetCui = req.body.cui !== undefined ? req.body.cui : txn.cui;
+    const targetDocNumber = req.body.documentNumber !== undefined ? req.body.documentNumber : txn.documentNumber;
+    const targetBankAccount = req.body.bankAccount !== undefined ? req.body.bankAccount : txn.bankAccount;
+
+    // 1. Validare duplicare număr document la update
+    if (targetDocNumber && targetSupplier && (req.body.documentNumber !== undefined || req.body.supplier !== undefined)) {
+      const duplicateDoc = await Transaction.findOne({
+        _id: { $ne: txn._id },
+        supplier: { $regex: new RegExp(`^${targetSupplier}$`, 'i') },
+        documentNumber: targetDocNumber
+      });
+      if (duplicateDoc) {
+        return res.status(400).json({
+          success: false,
+          message: `O altă factură cu numărul "${targetDocNumber}" de la furnizorul "${targetSupplier}" există deja.`,
+        });
+      }
+    }
+
+    // 2. Validare consistență CUI la update
+    if (targetCui && targetSupplier && (req.body.cui !== undefined || req.body.supplier !== undefined)) {
+      const partnerWithSameCui = await Transaction.findOne({
+        cui: targetCui,
+        supplier: { $regex: new RegExp(`^${targetSupplier}$`, 'i') }
+      });
+      if (!partnerWithSameCui) {
+        const exactCuiOwner = await Transaction.findOne({ cui: targetCui, _id: { $ne: txn._id } });
+        if (exactCuiOwner) {
+          return res.status(400).json({
+            success: false,
+            message: `Modificare refuzată! CUI-ul introdus este mapat pe partenerul „${exactCuiOwner.supplier}”.`,
+          });
+        }
+      }
+    }
+
+    // 3. Validare consistență cont IBAN la update
+    if (targetBankAccount && targetCui && (req.body.bankAccount !== undefined || req.body.cui !== undefined)) {
+      const ibanWithDifferentCui = await Transaction.findOne({
+        _id: { $ne: txn._id },
+        bankAccount: targetBankAccount,
+        cui: { $ne: targetCui }
+      });
+      if (ibanWithDifferentCui) {
+        return res.status(400).json({
+          success: false,
+          message: `Modificare refuzată! Acest IBAN este deja înregistrat pe partenerul „${ibanWithDifferentCui.supplier}” (CUI diferit).`,
+        });
+      }
+    }
+
     allowed.forEach(f => { if (req.body[f] !== undefined) txn[f] = req.body[f]; });
 
-    // Re-submit for approval if it was previously rejected
     if (txn.status === 'Respins') {
       txn.status = 'În așteptare';
       txn.rejectionReason = '';
@@ -271,14 +371,14 @@ exports.updateTransaction = async (req, res) => {
     txn.totalAmount = +(net + net * tva / 100).toFixed(2);
 
     if (txn.category === 'Stoc produse' && txn.stockItem) {
-  const stockExists = await Stock.findById(txn.stockItem);
-  if (!stockExists) {
-    return res.status(404).json({
-      success: false,
-      message: 'Produsul selectat nu mai există în nomenclator.',
-    });
-  }
-}
+      const stockExists = await Stock.findById(txn.stockItem);
+      if (!stockExists) {
+        return res.status(404).json({
+          success: false,
+          message: 'Produsul selectat nu mai există în nomenclator.',
+        });
+      }
+    }
 
     await txn.save();
     await txn.populate('createdBy', 'firstName lastName');
@@ -317,7 +417,6 @@ exports.getDashboardStats = async (req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    // Angajatul vede doar statistici pentru tranzacțiile lui
     const baseFilter = {};
 
     const [incomeAgg, expenseAgg, categoryAgg, balanceAgg] = await Promise.all([
@@ -334,15 +433,15 @@ exports.getDashboardStats = async (req, res) => {
         { $group: { _id: '$category', total: { $sum: '$totalAmount' } } },
       ]),
       Transaction.aggregate([
-  { $match: { ...baseFilter, status: 'Aprobat', createdAt: { $gte: startOfMonth, $lte: endOfMonth } } },
-  {
-    $group: {
-      _id: null,
-      income: { $sum: { $cond: [{ $eq: ['$type', 'Venit'] }, '$totalAmount', 0] } },
-      expenses: { $sum: { $cond: [{ $eq: ['$type', 'Cheltuială'] }, '$totalAmount', 0] } },
-    },
-  },
-]),
+        { $match: { ...baseFilter, status: 'Aprobat', createdAt: { $gte: startOfMonth, $lte: endOfMonth } } },
+        {
+          $group: {
+            _id: null,
+            income: { $sum: { $cond: [{ $eq: ['$type', 'Venit'] }, '$totalAmount', 0] } },
+            expenses: { $sum: { $cond: [{ $eq: ['$type', 'Cheltuială'] }, '$totalAmount', 0] } },
+          },
+        },
+      ]),
     ]);
 
     const pendingFilter = req.user.role === 'Angajat'
@@ -351,14 +450,12 @@ exports.getDashboardStats = async (req, res) => {
 
     const pendingCount = await Transaction.countDocuments(pendingFilter);
 
-    // Breakdown pe ultimele 6 luni
     const lunaNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthDates = Array.from({ length: 6 }, (_, idx) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
       return { label: lunaNames[d.getMonth()], year: d.getFullYear(), start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59) };
     });
 
-    // Breakdown pe ultimele 4 trimestre
     const currentQ = Math.floor(now.getMonth() / 3);
     const quarterDates = Array.from({ length: 4 }, (_, idx) => {
       let q = currentQ - (3 - idx); let y = now.getFullYear();
@@ -366,7 +463,6 @@ exports.getDashboardStats = async (req, res) => {
       return { label: `T${q + 1} '${String(y).slice(2)}`, start: new Date(y, q * 3, 1), end: new Date(y, q * 3 + 3, 0, 23, 59, 59) };
     });
 
-    // Breakdown pe ultimii 3 ani
     const yearDates = [2, 1, 0].map(i => {
       const y = now.getFullYear() - i;
       return { label: String(y), start: new Date(y, 0, 1), end: new Date(y, 11, 31, 23, 59, 59) };
