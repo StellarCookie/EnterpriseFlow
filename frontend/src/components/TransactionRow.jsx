@@ -10,8 +10,8 @@ const formatDate = (d) => {
 }
 
 const StatusBadge = ({ status }) => {
-  if (status === 'Aprobat') return <span className="status-approved">Aprobat</span>
-  if (status === 'Respins') return <span className="status-rejected">Respins</span>
+  if (status === 'Aprobat') return <span className="status-approved">Aprobată</span>
+  if (status === 'Respins') return <span className="status-rejected">Respinsă</span>
   return <span className="status-pending">În așteptare</span>
 }
 

@@ -19,8 +19,8 @@ const formatDate = (d) => {
 }
 
 const StatusBadge = ({ status }) => {
-  if (status === 'Aprobat') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"><Check size={9} />{status}</span>
-  if (status === 'Respins') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200"><X size={9} />{status}</span>
+  if (status === 'Aprobat') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"><Check size={9} />Aprobată</span>
+  if (status === 'Respins') return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200"><X size={9} />Respinsă</span>
   return <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200"><Clock size={9} />În așteptare</span>
 }
 
@@ -310,7 +310,7 @@ export default function Tranzactii() {
       sublabel: selected.status === 'Aprobat'
         ? `${selected.approvedBy?.firstName || ''} ${selected.approvedBy?.lastName || ''} · ${formatDate(selected.approvedAt)}`
         : selected.status === 'Respins'
-          ? `Respins · ${selected.rejectionReason || 'fără motiv'}`
+          ? `Respinsă · ${selected.rejectionReason || 'fără motiv'}`
           : `${user?.firstName} ${user?.lastName} · În așteptare decizie`,
       state: selected.status === 'Aprobat' ? 'done' : selected.status === 'Respins' ? 'done' : 'active'
     },

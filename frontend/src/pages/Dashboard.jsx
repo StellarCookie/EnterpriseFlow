@@ -388,7 +388,7 @@ export default function Dashboard() {
                           </p>
                           <div className="text-right">
                             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${txn.status === 'Aprobat' ? 'bg-emerald-100/70 text-emerald-700' : txn.status === 'Respins' ? 'bg-sky-100/70 text-sky-700' : 'bg-amber-100/70 text-amber-700'}`}>
-                              {txn.status}
+                              {txn.status === 'Aprobat' ? 'Aprobată' : txn.status === 'Respins' ? 'Respinsă' : txn.status}
                             </span>
                           </div>
                         </div>
@@ -564,7 +564,7 @@ export default function Dashboard() {
                               {isIn ? '+' : '-'}{formatRON(txn.totalAmount)}
                             </p>
                             <span className={`text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full ${txn.status === 'Aprobat' ? 'bg-emerald-100/60 text-emerald-700' : txn.status === 'Respins' ? 'bg-sky-100/60 text-sky-700' : 'bg-amber-100/60 text-amber-700'}`}>
-                              {txn.status}
+                              {txn.status === 'Aprobat' ? 'Aprobată' : txn.status === 'Respins' ? 'Respinsă' : txn.status}
                             </span>
                           </div>
                         </div>
