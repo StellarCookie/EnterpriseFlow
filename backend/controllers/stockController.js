@@ -1,4 +1,5 @@
 const Stock = require('../models/Stock');
+const Transaction = require('../models/Transaction');
 
 // GET /api/stocks — ambele roluri văd lista
 exports.getStocks = async (req, res) => {
@@ -102,13 +103,21 @@ exports.updateStock = async (req, res) => {
   }
 };
 
-// DELETE /api/stocks/:id — doar Angajat
 exports.deleteStock = async (req, res) => {
   try {
+    const linked = await Transaction.exists({ stockItem: req.params.id });
+    if (linked) {
+      return res.status(400).json({
+        success: false,
+        message: 'Produsul are tranzacții asociate și nu poate fi șters.',
+      });
+    }
+
     const stock = await Stock.findByIdAndDelete(req.params.id);
     if (!stock) {
       return res.status(404).json({ success: false, message: 'Produsul nu a fost găsit.' });
     }
+
     res.status(200).json({ success: true, message: 'Produs șters cu succes.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -10,9 +10,14 @@ export function useTransactions(statusFilter = 'Toate') {
     setLoading(true)
     setError(null)
     try {
+       const statusMap = {
+        'Aprobate': 'Aprobat',
+        'Respinse': 'Respins',
+        'În așteptare': 'În așteptare',
+      }
       const params = new URLSearchParams()
       if (statusFilter && statusFilter !== 'Toate') {
-        params.append('status', statusFilter)
+        params.append('status', statusMap[statusFilter] || statusFilter)
       }
       params.append('limit', '100')
       const queryString = params.toString() ? `?${params.toString()}` : ''

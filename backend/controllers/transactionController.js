@@ -65,7 +65,7 @@ exports.createTransaction = async (req, res) => {
     }
 
     // Validare: dacă e Stoc produse, trebuie să aibă un item și cantitate
-    if (category === 'Stoc produse') {
+    if (category === 'Produse') {
       if (!stockItem) {
         return res.status(400).json({
           success: false,
@@ -100,8 +100,8 @@ exports.createTransaction = async (req, res) => {
       dueDate: dueDate || undefined,
       paymentMethod,
       notes,
-      stockItem: category === 'Stoc produse' ? stockItem : null,
-      stockQuantityDelta: category === 'Stoc produse' ? parseInt(stockQuantityDelta) : 0,
+      stockItem: category === 'Produse' ? stockItem : null,
+      stockQuantityDelta: category === 'Produse' ? parseInt(stockQuantityDelta) : 0,
       createdBy: req.user._id,
       status: 'În așteptare',
       documentNumber: cleanDocNumber,
@@ -204,7 +204,7 @@ exports.approveTransaction = async (req, res) => {
     }
 
     if (
-      transaction.category === 'Stoc produse' &&
+      transaction.category === 'Produse' &&
       transaction.stockItem &&
       transaction.stockQuantityDelta > 0
     ) {

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const transactionSchema = new mongoose.Schema(
   {
@@ -15,7 +16,6 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // --- CÂMPURI NOI ADĂUGATE ---
     documentNumber: {
       type: String,
       trim: true,
@@ -24,18 +24,17 @@ const transactionSchema = new mongoose.Schema(
     bankAccount: {
       type: String,
       trim: true,
-      default: '', // IBAN-ul extras de pe factură
+      default: '',
     },
     issueDate: {
       type: Date,
-      default: null, // Data emiterii înscrisă pe document
+      default: null,
     },
     paymentStatus: {
       type: String,
       enum: ['Neplătit', 'Plătit', 'În curs'],
       default: 'Neplătit',
     },
-    // ----------------------------
     supplier: {
       type: String,
       required: [true, 'Furnizorul/Clientul este obligatoriu'],
@@ -64,7 +63,7 @@ const transactionSchema = new mongoose.Schema(
       required: true,
     },
     dueDate: {
-      type: Date, // Rămâne neschimbat: data limită pentru aprobarea managerului
+      type: Date,
     },
     paymentMethod: {
       type: String,
@@ -121,35 +120,20 @@ const transactionSchema = new mongoose.Schema(
 transactionSchema.pre('save', async function (next) {
   if (!this.reference) {
     try {
-      // Preluăm dinamic modelul User pentru a nu face require circular la începutul fișierului
       const User = mongoose.model('User');
       const user = await User.findById(this.createdBy);
-      
-      let initials = 'US'; // Cod implicit dacă nu găsește utilizatorul
+
+      let initials = 'US';
       if (user && user.firstName && user.lastName) {
-        // Extragem prima literă din prenume și prima din nume
         initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
       }
 
-      // Căutăm ultima tranzacție salvată în baza de date pentru a vedea numărul secvențial
-      const lastTransaction = await this.constructor.findOne({}, { reference: 1 })
-        .sort({ createdAt: -1 });
+      // Counter.next() is a single atomic MongoDB operation ($inc + upsert).
+      // No matter how many transactions are saved at the same time, each gets
+      // a unique sequence number — no race condition possible.
+      const seq = await Counter.next('transaction');
+      const formattedNumber = String(seq).padStart(4, '0');
 
-      let nextNumber = 1;
-      if (lastTransaction && lastTransaction.reference) {
-        // Luăm ultima bucată din cod (care conține numărul, de ex: "0004")
-        const parts = lastTransaction.reference.split('-');
-        const lastNum = parseInt(parts[parts.length - 1], 10);
-        
-        if (!isNaN(lastNum)) {
-          nextNumber = lastNum + 1;
-        }
-      }
-
-      // Formatăm numărul cu 4 cifre (ex: 1 devine 0001, 12 devine 0012)
-      const formattedNumber = String(nextNumber).padStart(4, '0');
-      
-      // Construim ID-ul final: ex. TXN-AN-0001, TXN-AN-0002 etc.
       this.reference = `TXN-${initials}-${formattedNumber}`;
     } catch (error) {
       return next(error);

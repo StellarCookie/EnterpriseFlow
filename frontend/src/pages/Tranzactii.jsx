@@ -78,9 +78,8 @@ export default function Tranzactii() {
   const [loadingScan, setLoadingScan] = useState(false)
   const [form, setForm] = useState(resetForm)
   const [customFields, setCustomFields] = useState(resetCustom)
-
-  // 1. Adăugare stare locală pentru validarea câmpurilor unice
   const [validationErrors, setValidationErrors] = useState({ cui: '', bankAccount: '' })
+  const [newStockForm, setNewStockForm] = useState(null)
 
   const { transactions, loading, pendingCount, approve, reject, create, update, remove, refetch } = useTransactions(filter === 'Toate' ? null : filter)
   const { stocks } = useStocks()
@@ -96,30 +95,26 @@ export default function Tranzactii() {
     setSearchParams({}, { replace: true })
   }, [searchParams, transactions, setSearchParams])
 
-  // 2. Funcție pentru validarea lungimilor strânse în interfață
   const validateFields = (field, value) => {
-    let errs = { ...validationErrors };
-    
+    let errs = { ...validationErrors }
     if (field === 'cui') {
-      const cleanCui = value.toUpperCase().replace(/\s/g, '');
+      const cleanCui = value.toUpperCase().replace(/\s/g, '')
       if (cleanCui.length > 0 && (cleanCui.length < 2 || cleanCui.length > 12)) {
-        errs.cui = 'CUI invalid (trebuie să aibă între 2 și 12 caractere).';
+        errs.cui = 'CUI invalid (trebuie să aibă între 2 și 12 caractere).'
       } else {
-        errs.cui = '';
+        errs.cui = ''
       }
     }
-
     if (field === 'bankAccount') {
-      const cleanIban = value.toUpperCase().replace(/\s/g, '');
+      const cleanIban = value.toUpperCase().replace(/\s/g, '')
       if (cleanIban.length > 0 && cleanIban.length !== 24) {
-        errs.bankAccount = `IBAN incomplet (${cleanIban.length}/24 caractere).`;
+        errs.bankAccount = `IBAN incomplet (${cleanIban.length}/24 caractere).`
       } else {
-        errs.bankAccount = '';
+        errs.bankAccount = ''
       }
     }
-
-    setValidationErrors(errs);
-  };
+    setValidationErrors(errs)
+  }
 
   const handleNetChange = (val) => {
     const net = parseFloat(val) || 0
@@ -128,13 +123,13 @@ export default function Tranzactii() {
     setForm(f => ({ ...f, netAmount: val, totalAmount: total.toFixed(2) }))
   }
 
-  // 3. Resetarea stării erorilor la închiderea formularului
   const closeForm = () => {
     setShowForm(false)
     setEditMode(false)
     setForm(resetForm)
     setCustomFields(resetCustom)
     setValidationErrors({ cui: '', bankAccount: '' })
+    setNewStockForm(null)
   }
 
   const openEdit = () => {
@@ -166,7 +161,27 @@ export default function Tranzactii() {
     e.preventDefault()
     setActionLoading(true)
     try {
-      const newTxn = await create(form)
+      let finalForm = { ...form }
+
+      if (form.stockItem === '__nou__') {
+        if (!newStockForm?.name) {
+          toastError('Introdu cel puțin denumirea produsului nou.')
+          setActionLoading(false)
+          return
+        }
+        const stockRes = await api.post('/stocks', {
+          name: newStockForm.name,
+          sku: newStockForm.sku,
+          unit: newStockForm.unit || 'buc.',
+          minQuantity: newStockForm.minQuantity || 2,
+          quantity: 0,
+unitPrice: form.stockQuantityDelta > 0
+  ? parseFloat((parseFloat(form.netAmount) / parseFloat(form.stockQuantityDelta)).toFixed(2))
+  : 0,        })
+        finalForm.stockItem = stockRes.data.data._id
+      }
+
+      const newTxn = await create(finalForm)
       success('Tranzacție înregistrată și trimisă spre aprobare.')
       closeForm()
       setSelected(newTxn)
@@ -251,9 +266,8 @@ export default function Tranzactii() {
       })
       if (response.data.success) {
         const extracted = response.data.data
-        const fmtCui = extracted.cui ? extracted.cui.toUpperCase().replace(/\s/g, '') : '';
-        const fmtIban = extracted.bankAccount ? extracted.bankAccount.toUpperCase().replace(/\s/g, '') : '';
-
+        const fmtCui = extracted.cui ? extracted.cui.toUpperCase().replace(/\s/g, '') : ''
+        const fmtIban = extracted.bankAccount ? extracted.bankAccount.toUpperCase().replace(/\s/g, '') : ''
         setForm(f => ({
           ...f,
           cui: fmtCui || f.cui,
@@ -265,11 +279,8 @@ export default function Tranzactii() {
           tva: extracted.tva || f.tva,
           totalAmount: extracted.totalAmount || f.totalAmount,
         }))
-        
-        // Verificăm validarea și pentru datele venite din scanarea OCR
-        if (fmtCui) validateFields('cui', fmtCui);
-        if (fmtIban) validateFields('bankAccount', fmtIban);
-
+        if (fmtCui) validateFields('cui', fmtCui)
+        if (fmtIban) validateFields('bankAccount', fmtIban)
         success('Document scanat cu succes! Câmpurile financiare au fost completate.')
       }
     } catch (err) {
@@ -449,17 +460,20 @@ export default function Tranzactii() {
                     <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-3">Detalii financiare</p>
                     <div className="bg-white/50 border border-[#b48bd0]/20 rounded-2xl overflow-hidden">
                       {[
-                        { label: 'Nr. document', value: selected.documentNumber || '-' },
-                        { label: 'Dată emitere', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
-                        { label: 'CUI', value: selected && selected.cui || '-', mono: true },
-                        { label: 'IBAN', value: selected.bankAccount || '-', mono: true },
-                        { label: 'Status plată', value: selected.paymentStatus || 'Neplătit', badge: true },
-                        { label: 'Sumă netă', value: formatRON(selected.netAmount) },
-                        { label: `TVA (${selected.tva || 19}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
-                        { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
-                        { label: 'Metodă plată', value: selected.paymentMethod },
-                        { label: 'Scadență aprobare', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
-                      ].map(({ label, value, bold, mono, badge, alert }) => (
+  { label: 'Nr. document', value: selected.documentNumber || '-' },
+  ...(selected.category === 'Produse' && selected.stockItem ? [
+    { label: 'Produs stoc', value: selected.stockItem?.name || '-' },
+  ] : []),
+  { label: 'Dată emitere', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
+  { label: 'CUI', value: selected && selected.cui || '-', mono: true },
+  { label: 'IBAN', value: selected.bankAccount || '-', mono: true },
+  { label: 'Status plată', value: selected.paymentStatus || 'Neplătit', badge: true },
+  { label: 'Sumă netă', value: formatRON(selected.netAmount) },
+  { label: `TVA (${selected.tva || 19}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
+  { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
+  { label: 'Metodă plată', value: selected.paymentMethod },
+  { label: 'Scadență aprobare', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
+].map(({ label, value, bold, mono, badge, alert }) => (
                         <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-[#b48bd0]/10 last:border-0">
                           <span className="text-[12px] text-[#b48bd0] flex-shrink-0 mr-2">{label}</span>
                           {badge ? (
@@ -547,7 +561,6 @@ export default function Tranzactii() {
         </div>
       </div>
 
-      {/* Modal Formular */}
       {showForm && (
         <div className="fixed inset-0 bg-[#352a6e]/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white/90 backdrop-blur-xl border border-[#b48bd0]/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -605,33 +618,31 @@ export default function Tranzactii() {
                 <input required className={inputCls} value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Ex: Electro SRL" />
               </div>
 
-              {/* MODIFICAT: Câmpul CUI cu validare în timp real, auto-uppercase și eroare vizuală */}
               <div>
                 <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">CUI</label>
-                <input 
-                  className={`${inputCls} ${validationErrors.cui ? 'border-red-500 focus:border-red-500 bg-red-50/30' : ''}`} 
-                  value={form.cui} 
-                  maxLength={12} 
+                <input
+                  className={`${inputCls} ${validationErrors.cui ? 'border-red-500 focus:border-red-500 bg-red-50/30' : ''}`}
+                  value={form.cui}
+                  maxLength={12}
                   onChange={e => {
-                    const val = e.target.value.toUpperCase().replace(/\s/g, '');
-                    setForm(f => ({ ...f, cui: val }));
-                    validateFields('cui', val);
-                  }} 
-                  placeholder="Ex: RO12345678" 
+                    const val = e.target.value.toUpperCase().replace(/\s/g, '')
+                    setForm(f => ({ ...f, cui: val }))
+                    validateFields('cui', val)
+                  }}
+                  placeholder="Ex: RO12345678"
                 />
                 {validationErrors.cui && <p className="text-red-500 text-[11px] mt-1 font-medium">{validationErrors.cui}</p>}
               </div>
 
-              {/* MODIFICAT: Limita maximă pe numărul de document */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Număr document</label>
-                  <input 
-                    className={inputCls} 
-                    value={form.documentNumber} 
-                    maxLength={30} 
-                    onChange={e => setForm(f => ({ ...f, documentNumber: e.target.value }))} 
-                    placeholder="Ex: Seria FT nr. 42" 
+                  <input
+                    className={inputCls}
+                    value={form.documentNumber}
+                    maxLength={30}
+                    onChange={e => setForm(f => ({ ...f, documentNumber: e.target.value }))}
+                    placeholder="Ex: Seria FT nr. 42"
                   />
                 </div>
                 <div>
@@ -640,20 +651,19 @@ export default function Tranzactii() {
                 </div>
               </div>
 
-              {/* MODIFICAT: Câmpul Cont IBAN cu validare pe 24 de caractere și auto-uppercase */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Cont IBAN</label>
-                  <input 
-                    className={`${inputCls} ${validationErrors.bankAccount ? 'border-red-500 focus:border-red-500 bg-red-50/30' : ''}`} 
-                    value={form.bankAccount} 
-                    maxLength={24} 
+                  <input
+                    className={`${inputCls} ${validationErrors.bankAccount ? 'border-red-500 focus:border-red-500 bg-red-50/30' : ''}`}
+                    value={form.bankAccount}
+                    maxLength={24}
                     onChange={e => {
-                      const val = e.target.value.toUpperCase().replace(/\s/g, '');
-                      setForm(f => ({ ...f, bankAccount: val }));
-                      validateFields('bankAccount', val);
-                    }} 
-                    placeholder="RO00BTRL..." 
+                      const val = e.target.value.toUpperCase().replace(/\s/g, '')
+                      setForm(f => ({ ...f, bankAccount: val }))
+                      validateFields('bankAccount', val)
+                    }}
+                    placeholder="RO00BTRL..."
                   />
                   {validationErrors.bankAccount && <p className="text-red-500 text-[11px] mt-1 font-medium">{validationErrors.bankAccount}</p>}
                 </div>
@@ -668,20 +678,100 @@ export default function Tranzactii() {
               </div>
 
               {form.category === 'Produse' && (
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Produs din stoc</label>
-                    <select className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
-                      value={form.stockItem} onChange={e => setForm(f => ({ ...f, stockItem: e.target.value }))}>
-                      <option value="">Selectează</option>
-                      {stocks.map(s => <option key={s._id} value={s._id}>{s.name} (stoc: {s.quantity})</option>)}
-                    </select>
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Produs din stoc</label>
+                      <select
+                        className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
+                        value={form.stockItem}
+                        onChange={e => {
+  if (e.target.value === '__nou__') {
+    setForm(f => ({ ...f, stockItem: '__nou__' }))
+    setNewStockForm({ name: '', sku: '', unit: 'buc.', minQuantity: '2' })
+  } else {
+    const selectedStock = stocks.find(s => s._id === e.target.value)
+    setForm(f => {
+      if (form.type === 'Venit' && selectedStock?.unitPrice > 0) {
+        const qty = parseFloat(f.stockQuantityDelta) || 1
+        const net = parseFloat((selectedStock.unitPrice * qty).toFixed(2))
+        const tvaRate = parseFloat(f.tva) || 0
+        const total = parseFloat((net + net * tvaRate / 100).toFixed(2))
+        return { ...f, stockItem: e.target.value, netAmount: net, totalAmount: total }
+      }
+      return { ...f, stockItem: e.target.value }
+    })
+    setNewStockForm(null)
+  }
+}}>
+                        <option value="">Selectează</option>
+                        {stocks.map(s => <option key={s._id} value={s._id}>{s.name} (stoc: {s.quantity})</option>)}
+                        <option value="__nou__">+ Produs nou</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Cantitate</label>
+                      <input type="number" min="1"
+                        className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
+                        value={form.stockQuantityDelta}
+                        onChange={e => setForm(f => ({ ...f, stockQuantityDelta: e.target.value }))}
+                        placeholder="Ex: 4" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Cantitate</label>
-                    <input type="number" min="1" className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
-                      value={form.stockQuantityDelta} onChange={e => setForm(f => ({ ...f, stockQuantityDelta: e.target.value }))} placeholder="Ex: 4" />
-                  </div>
+
+                  {newStockForm && (
+                    <div className="border-t border-emerald-200 pt-3 space-y-2">
+                      <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">Detalii produs nou</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-emerald-700 mb-1">Denumire *</label>
+                          <input
+                            className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
+                            value={newStockForm.name}
+                            onChange={e => setNewStockForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="Ex: Hârtie A4" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-emerald-700 mb-1">SKU (opțional)</label>
+                          <input
+                            className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
+                            value={newStockForm.sku}
+                            onChange={e => setNewStockForm(f => ({ ...f, sku: e.target.value }))}
+                            placeholder="Ex: HAR-A4-80G" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-emerald-700 mb-1">Unitate măsură</label>
+                          <input
+                            className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
+                            value={newStockForm.unit}
+                            onChange={e => {
+  const qty = parseFloat(e.target.value) || 0
+  setForm(f => {
+    if (form.type === 'Venit' && f.stockItem && f.stockItem !== '__nou__') {
+      const selectedStock = stocks.find(s => s._id === f.stockItem)
+      if (selectedStock?.unitPrice > 0) {
+        const net = parseFloat((selectedStock.unitPrice * qty).toFixed(2))
+        const tvaRate = parseFloat(f.tva) || 0
+        const total = parseFloat((net + net * tvaRate / 100).toFixed(2))
+        return { ...f, stockQuantityDelta: e.target.value, netAmount: net, totalAmount: total }
+      }
+    }
+    return { ...f, stockQuantityDelta: e.target.value }
+  })
+}}
+                            placeholder="buc., kg, l..." />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-emerald-700 mb-1">Stoc minim alertă</label>
+                          <input type="number" min="0"
+                            className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
+                            value={newStockForm.minQuantity}
+                            onChange={e => setNewStockForm(f => ({ ...f, minQuantity: e.target.value }))}
+                            placeholder="2" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -727,17 +817,15 @@ export default function Tranzactii() {
                 <textarea rows={2} className={inputCls + ' resize-none'} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Detalii suplimentare..." />
               </div>
 
-              {/* MODIFICAT: Dezactivarea butonului de trimitere dacă există erori de validare */}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeForm}
                   className="flex-1 py-2.5 rounded-xl text-[13px] font-medium bg-white/60 border border-[#b48bd0]/30 text-[#b48bd0] hover:text-[#352a6e] transition-all duration-200">
                   Anulează
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={actionLoading || loadingScan || !!validationErrors.cui || !!validationErrors.bankAccount}
-                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-40 disabled:cursor-not-allowed bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200"
-                >
+                  className="flex-1 py-2.5 rounded-xl text-[13px] font-medium text-white disabled:opacity-40 disabled:cursor-not-allowed bg-[#5b4ad1] hover:bg-[#6a63d4] shadow-md shadow-[#5b4ad1]/25 transition-all duration-200">
                   {actionLoading ? 'Se salvează...' : editMode ? 'Salvează modificările' : 'Înregistrează'}
                 </button>
               </div>
