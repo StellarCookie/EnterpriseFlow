@@ -38,7 +38,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <div key={p.dataKey} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span className="text-[#6a63d4]/80">{p.name}: </span>
-          <span className="font-semibold text-[#352a6e]">{p.name === 'Ore Lucrate' ? `${p.value} ore` : formatRON(p.value)}</span>
+          <span className="font-semibold text-[#352a6e]">{p.name === 'Ore lucrate' ? `${p.value} ore` : formatRON(p.value)}</span>
         </div>
       ))}
     </div>
@@ -521,14 +521,14 @@ export default function Dashboard() {
               <div className="flex flex-col gap-4">
                 {/* Ore lucrate */}
                 <HoverCard className="p-4 flex flex-col" style={{ height: 220 }}>
-                  <CardHeader title="Ore Lucrate (Săptămânal)" />
+                  <CardHeader title="Ore lucrate (săptămânal)" />
                   <ResponsiveContainer width="100%" height={126}>
                     <BarChart data={workLogs} barSize={22}>
                       <CartesianGrid vertical={false} stroke="rgba(180,139,208,0.2)" strokeDasharray="3 3" />
                       <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: '#6a63d4' }} axisLine={false} tickLine={false} unit=" h" domain={[0, 50]} />
                       <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(180,139,208,0.08)' }} />
-                      <Bar dataKey="ore" name="Ore Lucrate" fill="#5b4ad1" radius={[5, 5, 0, 0]}>
+                      <Bar dataKey="ore" name="Ore lucrate" fill="#5b4ad1" radius={[5, 5, 0, 0]}>
                         {workLogs.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.ore > 40 ? '#8fd0ff' : '#5b4ad1'} />
                         ))}
@@ -606,7 +606,7 @@ export default function Dashboard() {
                 {/* Evidența stocuri */}
                 <HoverCard className="p-4 flex flex-col" style={{ height: 476 }}>
                   <CardHeader
-                    title="Evidența stocuri"
+                    title="Evidență stocuri"
                     action={<button onClick={() => navigate('/stocuri')} className="text-[11.5px] text-[#5b4ad1] font-medium hover:underline">Gestionează</button>}
                   />
                   <div className="space-y-2 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>

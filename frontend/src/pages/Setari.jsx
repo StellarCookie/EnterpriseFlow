@@ -23,7 +23,7 @@ export default function Setari() {
 
   useEffect(() => {
     if (user && user.title) setUserTitle(user.title)
-    else if (user) setUserTitle(user.role === 'manager' ? 'Director Executiv' : 'Operator Date')
+    else if (user) setUserTitle(user.role === 'manager' ? 'Director executiv' : 'Operator date')
   }, [user])
 
   const handleTitleUpdate = async (e) => {
@@ -32,7 +32,7 @@ export default function Setari() {
     setLoadingTitle(true)
     try {
       const response = await api.patch('/auth/update-title', { title: userTitle })
-      if (response.data.success) success('Funcția profesională a fost salvată în baza de date!')
+      if (response.data.success) success('Funcția profesională a fost salvată în baza de date.')
     } catch (err) {
       toastError(err.response?.data?.message || 'Eroare la salvarea funcției.')
     } finally {
@@ -115,7 +115,7 @@ export default function Setari() {
             <div className="flex items-center justify-between mb-4 border-b border-[#b48bd0]/15 pb-3">
               <div className="flex items-center gap-2">
                 <User size={16} className="text-[#5b4ad1]" />
-                <h2 className="text-[14px] font-semibold text-[#352a6e]">Profil Utilizator</h2>
+                <h2 className="text-[14px] font-semibold text-[#352a6e]">Profil utilizator</h2>
               </div>
               <button onClick={handleTitleUpdate} disabled={loadingTitle}
                 className="px-3 py-1.5 bg-[#5b4ad1] hover:bg-[#6a63d4] text-white text-[11px] font-medium rounded-xl transition-all duration-200 flex items-center gap-1.5 shadow-sm shadow-[#5b4ad1]/25 disabled:opacity-50">
@@ -134,11 +134,11 @@ export default function Setari() {
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Rol în sistem</label>
-                <input type="text" disabled value={user?.role ? (user.role === 'manager' ? 'Manager / Administrator' : `Angajat (${user.role})`) : 'Se încarcă...'} className={inputDisabledCls} />
+                <input type="text" disabled value={user?.role ? (user.role === 'manager' ? 'Manager / Administrator' : `${user.role}`) : 'Se încarcă...'} className={inputDisabledCls} />
               </div>
               <div>
                 <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">
-                  Funcție (Title) — <span className="text-[#5b4ad1] lowercase font-normal">câmp editabil</span>
+                  Funcție <span className="text-[#5b4ad1] lowercase font-normal">(câmp editabil)</span>
                 </label>
                 <input type="text" value={userTitle} onChange={e => setUserTitle(e.target.value)} placeholder="Ex: Field Engineer / Contabil" className={inputCls} />
               </div>
@@ -229,14 +229,14 @@ export default function Setari() {
           <section className="bg-red-50/60 backdrop-blur-xl rounded-2xl border border-red-200/60 p-6">
             <div className="flex items-center gap-2 mb-4 border-b border-red-200/40 pb-3">
               <AlertTriangle size={16} className="text-red-500" />
-              <h2 className="text-[14px] font-semibold text-red-600">Zonă de siguranță (Danger Zone)</h2>
+              <h2 className="text-[14px] font-semibold text-red-600">Zona de siguranță</h2>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between bg-white/60 border border-red-200/50 p-4 rounded-xl">
                 <div className="max-w-[60%]">
                   <h4 className="text-[12.5px] font-semibold text-[#352a6e]">Resetează datele demo</h4>
-                  <p className="text-[11px] text-[#b48bd0]">Șterge toate tranzacțiile noi înregistrate, editările din inventar și readuce baza de date la starea inițială de seed.</p>
+                  <p className="text-[11px] text-[#b48bd0]">Șterge toate tranzacțiile noi înregistrate, editările din inventar și readuce baza de date la starea inițială.</p>
                 </div>
                 {!resetPending ? (
                   <button onClick={() => setResetPending(true)}

@@ -80,7 +80,7 @@ export default function Login() {
                 className="text-[#352a6e] font-semibold text-2xl leading-tight tracking-tight"
               />
               <BlurText
-                text="Financial OS"
+                text="SO Financiar"
                 animateBy="letters"
                 direction="top"
                 delay={60}

@@ -317,11 +317,11 @@ export default function Tranzactii() {
     {
       label: 'Actualizare automată stoc',
       sublabel: 'Sistem · Declanșat automat după aprobare',
-      state: selected.status === 'Aprobat' && selected.category === 'Stoc produse' ? 'done' : 'wait'
+      state: selected.status === 'Aprobat' && selected.category === 'Produse' ? 'done' : 'wait'
     },
   ] : []
 
-  const filterLabels = ['Toate', 'În așteptare', 'Aprobat', 'Respins']
+  const filterLabels = ['Toate', 'În așteptare', 'Aprobate', 'Respinse']
 
   const inputCls = "w-full px-3 py-2 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 focus:bg-white/80 text-[#352a6e] placeholder-[#b48bd0]/60 transition-all duration-150"
   const selectCls = "w-full px-3 py-2 text-sm bg-white/50 border border-[#b48bd0]/30 rounded-xl outline-none focus:border-[#5b4ad1]/60 text-[#352a6e] transition-all duration-150"
@@ -402,7 +402,7 @@ export default function Tranzactii() {
               <div className="px-5 py-3 border-b border-[#b48bd0]/15 flex items-center justify-between flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, rgba(247,241,248,0.7), rgba(255,255,255,0.5))' }}>
                 <div className="min-w-0 flex-1 mr-3">
-                  <h2 className="text-[14px] font-semibold text-[#352a6e] truncate">{selected.documentType} — {selected.supplier}</h2>
+                  <h2 className="text-[14px] font-semibold text-[#352a6e] truncate">{selected.documentType} - {selected.supplier}</h2>
                   <p className="text-[11px] text-[#b48bd0]">{selected.reference} · {selected.createdBy?.firstName} {selected.createdBy?.lastName} · {formatDate(selected.createdAt)}</p>
                 </div>
                 <StatusBadge status={selected.status} />
@@ -423,10 +423,10 @@ export default function Tranzactii() {
                   ))}
                 </div>
 
-                {selected.category === 'Stoc produse' && selected.stockItem && (
+                {selected.category === 'Produse' && selected.stockItem && (
                   <div className="flex gap-3 p-3.5 rounded-xl text-[12.5px] bg-emerald-50 border border-emerald-200 text-emerald-700">
                     <Package size={15} className="flex-shrink-0 mt-0.5" />
-                    <p><strong>{selected.stockQuantityDelta} unități</strong> din stoc — cantitatea se actualizează automat la aprobare.</p>
+                    <p><strong>{selected.stockQuantityDelta} unități</strong> din stoc. Cantitatea se actualizează automat la aprobare.</p>
                   </div>
                 )}
 
@@ -449,7 +449,7 @@ export default function Tranzactii() {
                     <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-widest mb-3">Detalii financiare</p>
                     <div className="bg-white/50 border border-[#b48bd0]/20 rounded-2xl overflow-hidden">
                       {[
-                        { label: 'Nr. Document', value: selected.documentNumber || '-' },
+                        { label: 'Nr. document', value: selected.documentNumber || '-' },
                         { label: 'Dată emitere', value: selected.issueDate ? new Date(selected.issueDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
                         { label: 'CUI', value: selected && selected.cui || '-', mono: true },
                         { label: 'IBAN', value: selected.bankAccount || '-', mono: true },
@@ -458,7 +458,7 @@ export default function Tranzactii() {
                         { label: `TVA (${selected.tva || 19}%)`, value: formatRON(selected.totalAmount - selected.netAmount) },
                         { label: 'Total factură', value: formatRON(selected.totalAmount), bold: true },
                         { label: 'Metodă plată', value: selected.paymentMethod },
-                        { label: 'Scadență', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
+                        { label: 'Scadență aprobare', value: selected.dueDate ? new Date(selected.dueDate).toLocaleDateString('ro-RO') : '-', alert: selected.status === 'În așteptare' },
                       ].map(({ label, value, bold, mono, badge, alert }) => (
                         <div key={label} className="flex justify-between items-center px-4 py-2.5 border-b border-[#b48bd0]/10 last:border-0">
                           <span className="text-[12px] text-[#b48bd0] flex-shrink-0 mr-2">{label}</span>
@@ -536,9 +536,6 @@ export default function Tranzactii() {
 
               {!isManager && selected.status === 'Aprobat' && (
                 <div className="px-4 pb-3 pt-2.5 border-t border-[#b48bd0]/15 flex-shrink-0">
-                  <p className="text-[11px] text-[#b48bd0] text-center">
-                    Tranzacție aprobată — nu mai poate fi modificată.
-                  </p>
                 </div>
               )}
             </div>
@@ -567,10 +564,9 @@ export default function Tranzactii() {
                   </p>
                   <label className={`inline-flex items-center gap-2 px-4 py-2 bg-[#5b4ad1] text-white rounded-xl text-[12px] font-medium shadow-sm hover:bg-[#6a63d4] cursor-pointer transition-all ${loadingScan ? 'opacity-50 pointer-events-none' : ''}`}>
                     <Camera size={14} />
-                    <span>{loadingScan ? 'Procesare OCR în curs...' : 'Scanează Poză / PDF Factură'}</span>
+                    <span>{loadingScan ? 'Procesare OCR în curs...' : 'Scanează poză / Factură PDF'}</span>
                     <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleInvoiceScan} disabled={loadingScan} />
                   </label>
-                  <p className="text-[10px] text-[#b48bd0] mt-1.5 font-light">Sistemul va extrage automat CUI, Furnizor, Sumă și Dată</p>
                 </div>
               )}
 
@@ -629,7 +625,7 @@ export default function Tranzactii() {
               {/* MODIFICAT: Limita maximă pe numărul de document */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Număr Document</label>
+                  <label className="block text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-1.5">Număr document</label>
                   <input 
                     className={inputCls} 
                     value={form.documentNumber} 
@@ -671,13 +667,13 @@ export default function Tranzactii() {
                 </div>
               </div>
 
-              {form.category === 'Stoc produse' && (
+              {form.category === 'Produse' && (
                 <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                   <div>
                     <label className="block text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Produs din stoc</label>
                     <select className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
                       value={form.stockItem} onChange={e => setForm(f => ({ ...f, stockItem: e.target.value }))}>
-                      <option value="">— Selectează —</option>
+                      <option value="">Selectează</option>
                       {stocks.map(s => <option key={s._id} value={s._id}>{s.name} (stoc: {s.quantity})</option>)}
                     </select>
                   </div>
@@ -686,7 +682,6 @@ export default function Tranzactii() {
                     <input type="number" min="1" className="w-full px-3 py-2 text-sm border border-emerald-200 rounded-xl outline-none text-[#352a6e] bg-white"
                       value={form.stockQuantityDelta} onChange={e => setForm(f => ({ ...f, stockQuantityDelta: e.target.value }))} placeholder="Ex: 4" />
                   </div>
-                  <p className="col-span-2 text-[11px] text-emerald-600">Stocul se va actualiza automat la aprobarea managerului.</p>
                 </div>
               )}
 

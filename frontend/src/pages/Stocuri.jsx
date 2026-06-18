@@ -94,7 +94,6 @@ export default function Stocuri() {
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <Navbar
           title="Evidență stocuri"
-          subtitle={`${stocks.length} produse înregistrate${isManager ? ' — vizualizare' : ' — gestiune completă'}`}
         />
 
         <main className="flex-1 overflow-hidden flex flex-col px-7 pb-6 min-h-0">
