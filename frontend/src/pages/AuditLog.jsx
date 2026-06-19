@@ -6,6 +6,7 @@ import {
 import Sidebar from '../components/Sidebar';
 import Navbar  from '../components/Navbar';
 import { useAuth } from '../hooks/useAuth';
+import api from '../api';
 
 const ACTION_CONFIG = {
   CREATE: { label: 'Creat',       color: 'bg-emerald-100 text-emerald-700', Icon: Plus    },
@@ -92,26 +93,22 @@ const LogRow = ({ log }) => {
 
   return (
     <>
-      {/* Row — same grid as header */}
       <div
         className={`grid items-center px-5 py-2.5 border-b border-[#b48bd0]/10 transition-colors duration-150 ${hasDiff ? 'cursor-pointer hover:bg-[#f7f1f8]/40' : ''}`}
         style={{ gridTemplateColumns: GRID }}
         onClick={() => hasDiff && setOpen(o => !o)}
       >
-        {/* Acțiune */}
         <div>
           <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
             <cfg.Icon size={11} />{cfg.label}
           </span>
         </div>
 
-        {/* Entitate */}
         <div className="text-[12px] min-w-0 pr-2 flex items-center gap-1.5 flex-wrap">
           <span className="text-[#b48bd0]">{ENTITY_LABELS[log.entity] || log.entity}</span>
           {renderEntityDetails(log)}
         </div>
 
-        {/* Utilizator */}
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0 bg-gradient-to-br from-[#352a6e] to-[#5b4ad1]">
             {log.userName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
@@ -119,10 +116,8 @@ const LogRow = ({ log }) => {
           <span className="text-[12px] text-[#352a6e] truncate">{log.userName}</span>
         </div>
 
-        {/* Data */}
         <div className="text-[12px] text-[#b48bd0]">{fmt(log.createdAt)}</div>
 
-        {/* Expand icon */}
         <div className="flex justify-end">
           {hasDiff && (
             <span className="text-[#b48bd0]">
@@ -132,7 +127,6 @@ const LogRow = ({ log }) => {
         </div>
       </div>
 
-      {/* Diff panel */}
       {open && hasDiff && (
         <div className="px-8 py-3 bg-[#f7f1f8]/50 border-b border-[#b48bd0]/10">
           <p className="text-[10px] font-semibold text-[#b48bd0] uppercase tracking-wider mb-2">
@@ -162,12 +156,10 @@ export default function AuditLogPage() {
     try {
       const params = new URLSearchParams({ page, limit: 50 });
       Object.entries(filters).forEach(([k, v]) => v && params.append(k, v));
-      const token = sessionStorage.getItem('ef_token');
-      const res   = await fetch(`/api/audit?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-      const data  = await res.json();
-      setLogs(data.logs || []);
-      setTotal(data.total || 0);
-      setPages(data.pages || 1);
+      const res = await api.get(`/audit?${params}`);
+      setLogs(res.data.logs || []);
+      setTotal(res.data.total || 0);
+      setPages(res.data.pages || 1);
     } catch (err) {
       console.error('AUDIT ERROR:', err);
     } finally {
@@ -179,9 +171,7 @@ export default function AuditLogPage() {
 
   useEffect(() => {
     if (!isManager) return;
-    const token = sessionStorage.getItem('ef_token');
-    fetch('/api/audit/users', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(setUsers);
+    api.get('/audit/users').then(res => setUsers(res.data));
   }, [isManager]);
 
   const setFilter = (key, val) => { setFilters(f => ({ ...f, [key]: val })); setPage(1); };
@@ -198,7 +188,6 @@ export default function AuditLogPage() {
 
         <main className="flex-1 overflow-hidden flex flex-col px-7 pb-6 gap-3 min-h-0">
 
-          {/* Filters */}
           <div className="bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl px-4 py-3 flex-shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
               <Filter size={13} className="text-[#b48bd0]" />
@@ -225,7 +214,6 @@ export default function AuditLogPage() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="flex-1 bg-white/60 backdrop-blur-xl border border-[#b48bd0]/20 rounded-2xl overflow-hidden flex flex-col min-h-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -236,7 +224,6 @@ export default function AuditLogPage() {
             ) : (
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
 
-                {/* Header — fixed */}
                 <div className="flex-shrink-0 border-b border-[#b48bd0]/10">
                   <div className="grid px-5 py-2.5 bg-[#f7f1f8]/60" style={{ gridTemplateColumns: GRID }}>
                     {['Acțiune', 'Entitate', 'Utilizator', 'Data', ''].map(h => (
@@ -245,7 +232,6 @@ export default function AuditLogPage() {
                   </div>
                 </div>
 
-                {/* Rows — same grid, no table */}
                 <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                   {logs.map(log => <LogRow key={log._id} log={log} />)}
                 </div>
@@ -254,7 +240,6 @@ export default function AuditLogPage() {
             )}
           </div>
 
-          {/* Pagination */}
           {pages > 1 && (
             <div className="flex justify-center gap-2 flex-shrink-0">
               {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
