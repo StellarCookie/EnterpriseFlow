@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
 const Stock = require('../models/Stock');
 
@@ -188,33 +189,51 @@ exports.getTransaction = async (req, res) => {
 
 // PATCH /api/transactions/:id/approve — DOAR Manager
 exports.approveTransaction = async (req, res) => {
+  // 1. Inițializăm sesiunea ACID pentru MongoDB Atlas
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { managerNote } = req.body;
-    const transaction = await Transaction.findById(req.params.id).populate('stockItem');
+
+    // 2. Atașăm sesiunea la interogarea tranzacției (.session(session))
+    const transaction = await Transaction.findById(req.params.id)
+      .session(session)
+      .populate('stockItem');
 
     if (!transaction) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ success: false, message: 'Tranzacția nu a fost găsită.' });
     }
 
     if (transaction.status !== 'În așteptare') {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         message: `Tranzacția are deja statusul "${transaction.status}" și nu poate fi reaprobată.`,
       });
     }
 
+    // 3. Logica de actualizare a stocului, rulată în interiorul aceleiași sesiuni
     if (
       transaction.category === 'Produse' &&
       transaction.stockItem &&
       transaction.stockQuantityDelta > 0
     ) {
-      const stock = await Stock.findById(transaction.stockItem._id);
+      // Căutăm stocul legat structural de sesiune
+      const stock = await Stock.findById(transaction.stockItem._id).session(session);
+      
       if (stock) {
         if (transaction.type === 'Cheltuială') {
           stock.quantity = stock.quantity + transaction.stockQuantityDelta;
         } else {
           if (transaction.type === 'Venit') {
             if (stock.quantity < transaction.stockQuantityDelta) {
+              // Dacă stocul e insuficient, oprim și anulăm sesiunea
+              await session.abortTransaction();
+              session.endSession();
               return res.status(400).json({
                 success: false,
                 message: `Stoc insuficient. Disponibil: ${stock.quantity}, necesar: ${transaction.stockQuantityDelta}.`,
@@ -225,25 +244,38 @@ exports.approveTransaction = async (req, res) => {
             stock.quantity += transaction.stockQuantityDelta;
           }
         }
-        await stock.save();
+        // Salvăm stocul transmițând explicit sesiunea
+        await stock.save({ session });
       }
     }
 
+    // 4. Modificăm și salvăm tranzacția în sesiune
     transaction.status = 'Aprobat';
     transaction.approvedBy = req.user._id;
     transaction.approvedAt = new Date();
     if (managerNote !== undefined) transaction.managerNote = managerNote;
-    await transaction.save();
+    
+    await transaction.save({ session });
 
+    // 5. Dacă totul a decurs corect, salvăm permanent modificările în Atlas
+    await session.commitTransaction();
+    session.endSession();
+
+    // 6. Populăm datele pentru răspuns (operațiuni post-commit)
     await transaction.populate('createdBy', 'firstName lastName');
     await transaction.populate('approvedBy', 'firstName lastName');
     if (transaction.stockItem) {
       await transaction.populate('stockItem', 'name quantity unit');
     }
 
-    res.status(200).json({ success: true, data: transaction });
+    return res.status(200).json({ success: true, data: transaction });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    // În caz de orice eroare neprevăzută, dăm rollback complet
+    await session.abortTransaction();
+    session.endSession();
+    
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
